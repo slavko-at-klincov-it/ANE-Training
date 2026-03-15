@@ -1,0 +1,45 @@
+# maderix/ANE clone (reference, not our code)
+repo/
+
+# Personal AI (separate repo: ANE-PersonalAI)
+personal-ai/
+
+# Build artifacts
+*.dylib
+*.o
+*.d
+inmem_bench
+inmem_peak
+inmem_basic
+sram_bench
+sram_probe
+ane_int8_bench
+test_chaining
+test_chaining2
+test_advanced
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Data files
+*.bin
+!libane/test_ane.c
+
+# Compiled binaries
+libane/test_ane
+examples/demo_train
+
+# Temp
+/tmp/
+
+# macOS bookmark files
+*.webloc
