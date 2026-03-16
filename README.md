@@ -6,66 +6,60 @@
    / /| | /  |/ // __/
   / ___ |/ /|  // /___
  /_/  |_/_/ |_//_____/  Training
-
- ┌─────────────────────────────────────────┐
- │  Reverse-Engineering Apples             │
- │  Neural Engine für Training             │
- │                                         │
- │  35 Klassen · 9.4 TFLOPS · 1 Compile   │
- └─────────────────────────────────────────┘
 ```
 
-**Die erste eigenständige C-API für Apples privaten Neural Engine.**<br>
-Vollständige Hardware-Forschung. Lauffähige Demos. Benchmark-Suite.
+### Reverse-Engineering Apples Neural Engine
+
+**1 Compile · 9.4 TFLOPS · 35 Private Klassen · Zero Recompilation**
 
 [![License: MIT](https://img.shields.io/badge/Lizenz-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-macOS_15+-black.svg?logo=apple)](https://www.apple.com/macos/)
-[![Chip](https://img.shields.io/badge/Chip-Apple_Silicon-FF6B6B.svg)](https://support.apple.com/en-us/116943)
-[![API](https://img.shields.io/badge/libane-73KB_Shared_Library-blue.svg)](libane/)
-[![ANE Classes](https://img.shields.io/badge/ANE_Klassen-35_entdeckt-orange.svg)](RESEARCH_ANE_COMPLETE.md)
-[![Peak](https://img.shields.io/badge/Peak-9.4_TFLOPS_(FP16)-red.svg)](#-benchmark-ergebnisse-m3-pro)
+[![Platform](https://img.shields.io/badge/macOS_15+-111111.svg?logo=apple&logoColor=white)](https://www.apple.com/macos/)
+[![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1--M5-FF3B30.svg)](https://support.apple.com/en-us/116943)
+[![Compile](https://img.shields.io/badge/Compile-1x_for_∞_Steps-34C759.svg)](#dynamic-spatial-packing--der-durchbruch)
+[![TFLOPS](https://img.shields.io/badge/Peak-9.4_TFLOPS-007AFF.svg)](#benchmark-ergebnisse-m3-pro)
+[![Classes](https://img.shields.io/badge/ANE_Klassen-35-FF9500.svg)](RESEARCH_ANE_COMPLETE.md)
 
 </div>
 
+<br>
+
+> Die erste eigenständige C-API (`libane`) für Apples privaten Neural Engine. Ermöglicht **Training** direkt auf dem ANE — Apple beschränkt ihn offiziell auf Inference via CoreML. Vollständige Hardware-Forschung, lauffähige Demos, Benchmark-Suite.
+
 ---
-
-## Was ist das?
-
-Apple Silicon Chips (M1–M5) haben einen **Neural Engine (ANE)** — einen 16-Core KI-Beschleuniger mit bis zu 38 TOPS. Apple beschränkt ihn offiziell auf Inference via CoreML. Dieses Projekt knackt diese Beschränkung und ermöglicht **Training direkt auf dem ANE**.
 
 <table>
 <tr>
 <td width="50%">
 
-### Entdeckungen
+**Entdeckungen**
 
 | | |
-|---|---|
-| **35** | private API-Klassen (bekannt: nur 4) |
-| **6** | QoS-Level — Background ist 42% schneller |
-| **h15g** | Hardware-ID des M3 Pro, 16 Cores |
-| **9.4** | TFLOPS Peak (FP16) |
-| **1x** | Compile für unbegrenzt viele Training-Steps |
+|:--|:--|
+| `35` | Private API-Klassen entdeckt (bekannt: nur 4) |
+| `42%` | Schneller mit QoS Background statt Default |
+| `9.4` | TFLOPS Peak auf M3 Pro (FP16) |
+| `1` | Compile reicht — unbegrenzt viele Training-Steps |
+| `3x` | Conv 1x1 schneller als matmul auf ANE |
 
 </td>
 <td width="50%">
 
-### libane — Unsere C-API
+**libane — 73KB C-API**
 
 | | |
-|---|---|
-| **73 KB** | Shared Library |
-| **Dynamic** | Weights via IOSurface (zero recompile) |
-| **Zero-Copy** | I/O via IOSurface |
-| **6 QoS** | Prioritätsstufen |
-| **FP16 Safe** | Overflow Protection eingebaut |
+|:--|:--|
+| Dynamic | Weights via IOSurface, zero recompile |
+| Zero-Copy | I/O direkt in ANE-Speicher |
+| Version-Detection | Überlebt Apple API-Änderungen |
+| 6 QoS-Level | Background (9) bis Realtime (0) |
+| FP16 Safe | Overflow Protection eingebaut |
 
 </td>
 </tr>
 </table>
 
 > [!NOTE]
-> **Compilation-Pipeline:** `MIL → MLIR → LLIR → HWX` — siehe [Glossar](#-glossar) für alle Fachbegriffe.
+> **Compilation-Pipeline:** `MIL → MLIR → LLIR → HWX` — siehe [Glossar](#glossar) für alle Fachbegriffe.
 
 ---
 
@@ -129,10 +123,10 @@ make demo
 
 ```bash
 cd examples
-make demo       # ← Training Demo (Y=2X, 60 Steps)
-make bench      # ← Auto-Benchmark + ASCII Chart
-make generate   # ← Shakespeare auf ANE
-make explore    # ← 35 ANE-Klassen interaktiv
+make demo       # Training Demo (Y=2X, 60 Steps, 1 Compile)
+make bench      # Auto-Benchmark + ASCII Chart
+make generate   # Shakespeare Text-Generation auf ANE
+make explore    # 35 ANE-Klassen interaktiv erforschen
 ```
 
 <details open>
@@ -159,7 +153,7 @@ Diagonal average: 1.959 (converged!)
 Compile count: 1 / 119 budget
 ```
 
-**1 Compilation statt 60.** Weights werden per IOSurface-Write aktualisiert, nicht per Recompile. 0.1ms/step statt 0.3-0.5ms.
+**1 Compilation statt 60.** Weights werden per IOSurface-Write aktualisiert, nicht per Recompile. 0.1ms/step.
 
 </details>
 
@@ -192,9 +186,11 @@ Chip:   h15g (M3 Pro), 16 cores
 
 &nbsp;
 
-Bigram-Modell auf Shakespeare, Typewriter-Ausgabe:
+Bigram-Modell auf Shakespeare, Typewriter-Ausgabe. Kompiliert einmal, trainiert + generiert ohne Recompile:
 
 ```
+Compiled once (dynamic weights, no recompilation needed)
+
 Training bigram model on Shakespeare...
 step   loss      perplexity
 0       4.1589   64.00
@@ -202,6 +198,8 @@ step   loss      perplexity
 
 Generating text (200 chars, temperature=0.8)...
 To be or not to be, that is the question...
+
+Compiles used: 1 / 119
 ```
 
 </details>
@@ -234,90 +232,43 @@ Instance Methods (23):
 
 ---
 
-## Eigenen Code mit libane
-
-<details>
-<summary><b>Vollständiges Beispiel anzeigen</b> — <code>my_test.c</code></summary>
-
-&nbsp;
-
-```c
-#include <stdio.h>
-#include <string.h>
-#include "ane.h"
-
-int main() {
-    // 1. ANE initialisieren
-    int rc = ane_init();
-    if (rc != 0) {
-        printf("ANE init fehlgeschlagen: %d\n", rc);
-        return 1;
-    }
-
-    // 2. Hardware-Info abfragen
-    ANEDeviceInfo info = ane_device_info();
-    printf("ANE: %s, %d cores\n", info.arch, info.num_cores);
-
-    // 3. Gewichte vorbereiten (2x2 Einheitsmatrix)
-    float weights[] = {1.0f, 0.0f, 0.0f, 1.0f};
-    ANEWeight w = ane_weight_fp16("@model_path/weights/w.bin", weights, 2, 2);
-
-    // 4. MIL-Programm generieren (Linear Layer: 2→2, Sequenzlänge 1)
-    char *mil = ane_mil_linear(2, 2, 1, "@model_path/weights/w.bin");
-
-    // 5. Auf ANE kompilieren
-    size_t in_sz = 2 * 1 * sizeof(float);
-    size_t out_sz = 2 * 1 * sizeof(float);
-    ANEKernel *k = ane_compile(mil, strlen(mil), &w, 1,
-                               1, &in_sz, 1, &out_sz, ANE_QOS_BACKGROUND);
-
-    // 6. Input schreiben, ausführen, Output lesen
-    float input[] = {3.0f, 7.0f};
-    float output[2];
-    ane_write(k, 0, input, in_sz);
-    ane_eval(k, ANE_QOS_BACKGROUND);
-    ane_read(k, 0, output, out_sz);
-
-    printf("Input:  [%.1f, %.1f]\n", input[0], input[1]);
-    printf("Output: [%.1f, %.1f]\n", output[0], output[1]);
-
-    // 7. Aufräumen
-    ane_free(k);
-    free(mil);
-    ane_weight_free(&w);
-    return 0;
-}
-```
-
-**Kompilieren:**
-
-```bash
-xcrun clang -O2 -fobjc-arc -I libane -o my_test my_test.c libane/ane.m \
-    -framework Foundation -framework IOSurface -ldl
-./my_test
-```
-
-</details>
-
-Ausführliche API-Dokumentation: **[libane/README.md](libane/README.md)**
-
----
-
 ## Dynamic Spatial Packing — Der Durchbruch
 
-> [!NOTE]
-> **Das zentrale Problem:** ANE bakt Weights bei Compilation ins HWX-Binary. Jeder Weight-Update erfordert eine Recompilation (~520ms). Limit: ~119 Compilations pro Prozess, dann stille Fehler.
+> [!IMPORTANT]
+> **Das Problem:** Der ANE bakt Weights bei Compilation ins HWX-Binary. Jeder Weight-Update braucht eine Recompilation (~520ms). Hartes Limit: **~119 Compilations pro Prozess**, dann stille Fehler.
+>
+> **Die Lösung:** Weights nicht mehr ins Binary baken, sondern als **Input-Channels** neben den Aktivierungen packen. MIL-Code sliced sie auseinander → matmul. **1x kompilieren, unbegrenzt trainieren.**
 
-**Die Lösung:** Weights werden nicht mehr zur Compile-Zeit gebacken, sondern als Teil des **Input-Tensors** neben den Aktivierungen gepackt. Der MIL-Code sliced sie auseinander und führt die Berechnung per matmul aus. **Einmal kompilieren, unbegrenzt trainieren.**
+<table>
+<tr>
+<td width="50%">
 
+**Vorher — Standard**
 ```
-Vorher (Standard):                    Nachher (Dynamic Spatial Packing):
+Weights ──→ BLOBFILE ──→ Compile
+Input   ──→ IOSurface ──→ Eval
 
-  Weights ──→ BLOBFILE ──→ Compile      Weights ──→ IOSurface ──→ Write
-  Input   ──→ IOSurface ──→ Eval        Input   ──→ IOSurface ──→ Eval
-  Pro Step: 1 Compile + 1 Eval          Pro Step: 1 Write + 1 Eval
-  Budget: 119 Steps max                 Budget: ∞ Steps
+Pro Step:  1 Compile + 1 Eval
+Budget:    119 Steps max
+Latency:   0.3–0.5 ms/step
 ```
+
+</td>
+<td width="50%">
+
+**Nachher — Dynamic Spatial Packing**
+```
+Weights ──→ IOSurface ──→ Write
+Input   ──→ IOSurface ──→ Eval
+
+Pro Step:  1 Write + 1 Eval
+Budget:    ∞ Steps
+Latency:   0.1 ms/step
+```
+
+</td>
+</tr>
+</table>
 
 <details>
 <summary><b>Wie funktioniert das im Detail?</b></summary>
@@ -342,19 +293,19 @@ Vorher (Standard):                    Nachher (Dynamic Spatial Packing):
 
 **Neue libane API:**
 ```c
-// Generiert MIL mit Weights-als-Input (statt ane_mil_linear)
+// MIL mit Weights-als-Input generieren
 char *mil = ane_mil_linear_dynamic(in_ch, out_ch, seq);
 
-// Kompiliere EINMAL — keine Weights nötig
+// EINMAL kompilieren — keine Weights nötig
 ANEKernel *k = ane_compile(mil, strlen(mil), NULL, 0,
                            1, &in_bytes, 1, &out_bytes, ANE_QOS_BACKGROUND);
 
 // Training-Loop: nur IOSurface updaten, nie recompile
 for (int step = 0; step < 10000; step++) {
+    ane_write_dynamic_weights(k, 0, W, in_ch, out_ch, seq);
     ane_lock_input(k, 0);
     float *ptr = (float *)ane_input_ptr(k, 0);
-    // Aktivierungen schreiben (Channels 0..in_ch)
-    // Weights schreiben (Channels in_ch..in_ch+in_ch*out_ch, Spatial 0)
+    // Aktivierungen in Channels 0..in_ch schreiben
     ane_unlock_input(k, 0);
     ane_eval(k, ANE_QOS_BACKGROUND);
     // ... backward + SGD ...
@@ -375,12 +326,102 @@ Vor Dynamic Spatial Packing haben wir 5 andere Ansätze getestet:
 | Disk-Patch + Unload/Reload | Weights nicht aktualisiert | ANE bakt Weights beim Compile ins HWX |
 | In-Memory VM-Patch | Keine Wirkung | ANE nutzt SRAM-Kopie, ignoriert RAM-Patches |
 | `_ANEWeight` Klasse | Request erstellt, Weights nicht angewandt | Unbekanntes Binding |
-| `weightsBuffer` Parameter in `_ANERequest` | Akzeptiert, keine Wirkung | ANE ignoriert Runtime-Weights |
-| `ane_reload_weights()` (unload → patch files → reload) | MIL wird vom ANE gelöscht | Unload löscht tmpDir |
+| `weightsBuffer` in `_ANERequest` | Akzeptiert, keine Wirkung | ANE ignoriert Runtime-Weights |
+| `ane_reload_weights()` | MIL wird gelöscht | Unload löscht tmpDir |
 
 **Nur Dynamic Spatial Packing funktioniert** — Weights als Input-Daten, nicht als Compile-Time-Konstanten.
 
 </details>
+
+---
+
+## Eigenen Code mit libane
+
+<details>
+<summary><b>Statische Weights (Inference)</b> — <code>my_test.c</code></summary>
+
+&nbsp;
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include "ane.h"
+
+int main() {
+    ane_init();
+    ANEDeviceInfo info = ane_device_info();
+    printf("ANE: %s, %d cores\n", info.arch, info.num_cores);
+
+    // Gewichte vorbereiten (2x2 Einheitsmatrix)
+    float weights[] = {1.0f, 0.0f, 0.0f, 1.0f};
+    ANEWeight w = ane_weight_fp16("@model_path/weights/w.bin", weights, 2, 2);
+
+    // MIL generieren + kompilieren
+    char *mil = ane_mil_linear(2, 2, 1, "@model_path/weights/w.bin");
+    size_t in_sz = 2 * sizeof(float), out_sz = 2 * sizeof(float);
+    ANEKernel *k = ane_compile(mil, strlen(mil), &w, 1,
+                               1, &in_sz, 1, &out_sz, ANE_QOS_BACKGROUND);
+
+    // Ausführen
+    float input[] = {3.0f, 7.0f}, output[2];
+    ane_write(k, 0, input, in_sz);
+    ane_eval(k, ANE_QOS_BACKGROUND);
+    ane_read(k, 0, output, out_sz);
+
+    printf("Input:  [%.1f, %.1f]\n", input[0], input[1]);
+    printf("Output: [%.1f, %.1f]\n", output[0], output[1]);
+
+    ane_free(k); free(mil); ane_weight_free(&w);
+}
+```
+
+```bash
+xcrun clang -O2 -fobjc-arc -I libane -o my_test my_test.c libane/ane.m \
+    -framework Foundation -framework IOSurface -ldl
+```
+
+</details>
+
+<details>
+<summary><b>Dynamische Weights (Training)</b> — Compile-Once Pattern</summary>
+
+&nbsp;
+
+```c
+#include <string.h>
+#include "ane.h"
+
+int in_ch = 8, out_ch = 8, seq = 64;
+
+// 1. MIL mit dynamischen Weights generieren
+char *mil = ane_mil_linear_dynamic(in_ch, out_ch, seq);
+
+// 2. EINMAL kompilieren — keine Weights nötig
+size_t in_sz = (in_ch + in_ch * out_ch) * seq * sizeof(float);
+size_t out_sz = out_ch * seq * sizeof(float);
+ANEKernel *k = ane_compile(mil, strlen(mil), NULL, 0,
+                           1, &in_sz, 1, &out_sz, ANE_QOS_BACKGROUND);
+
+// 3. Training-Loop — Weights per IOSurface-Write, nie recompile
+float W[8 * 8];
+for (int step = 0; step < 10000; step++) {
+    // Weights + Aktivierungen packen
+    ane_write_dynamic_weights(k, 0, W, in_ch, out_ch, seq);
+    ane_lock_input(k, 0);
+    float *ptr = (float *)ane_input_ptr(k, 0);
+    // ptr[0..in_ch*seq] = Aktivierungen
+    ane_unlock_input(k, 0);
+
+    ane_eval(k, ANE_QOS_BACKGROUND);
+    // ... backward + SGD auf W ...
+}
+
+ane_free(k); free(mil);
+```
+
+</details>
+
+Ausführliche API-Dokumentation: **[libane/README.md](libane/README.md)**
 
 ---
 
@@ -411,9 +452,7 @@ Deswegen kann TOPS höher sein als TFLOPS bei gleicher Hardware.
 ## Chip-Vergleich — Alle Apple Silicon Generationen
 
 > [!NOTE]
-> **Der ANE ist bei base/Pro/Max identisch.** Innerhalb einer Generation teilen sich alle Varianten denselben 16-Core Neural Engine. Pro/Max bringen nur mehr GPU-Cores und Memory-Bandwidth. **Nur Ultra verdoppelt den ANE** (32 Cores via UltraFusion). Memory-Bandwidth hilft dem ANE **nicht**, solange Tensoren im ~32MB On-Chip SRAM bleiben.
-
-### Alle Generationen
+> **Der ANE ist bei base/Pro/Max identisch.** Innerhalb einer Generation: selber 16-Core Neural Engine. Pro/Max bringen nur mehr GPU + Bandwidth. **Nur Ultra verdoppelt den ANE** (32 Cores). Memory-Bandwidth hilft dem ANE **nicht**, solange Tensoren im ~32MB SRAM bleiben.
 
 | Chip | Arch | ANE TOPS | Mem BW | TFLOPS\* | INT8 | SRAM |
 |:---|:---|---:|---:|---:|:---|---:|
@@ -507,7 +546,7 @@ Basierend auf Stories110M (124 Vocab, compacted), gemessen auf M3 Pro = 91ms/ste
 | Constraint | Wert | Auswirkung |
 |:---|:---|:---|
 | **SRAM On-Chip** | ~32 MB (alle Generationen) | Tensoren >32MB spillen in DRAM → 30% Throughput-Drop |
-| **Compilation-Limit** | ~119 pro Prozess | Danach stille Fehler. Workaround: `exec()` Restart |
+| **Compilation-Limit** | ~119 pro Prozess | Danach stille Fehler. Gelöst durch Dynamic Spatial Packing |
 | **IOSurface Minimum** | ~49 KB | Kleinere Tensoren müssen gepaddet werden |
 | **IOSurface Sortierung** | Alphabetisch nach MIL-Name | Falsche Reihenfolge = stille Fehler |
 | **`concat` Op** | Wird abgelehnt | Muss in separate Programme aufgeteilt werden |
@@ -525,23 +564,23 @@ Training Step = 91ms:
 
   ANE Forward          ██████░░░░░░░░░░░░░░  22ms  (24%)
   ANE Backward (dx)    ████████░░░░░░░░░░░░  15ms  (16%)
-  CPU dW Gradients     ██████████░░░░░░░░░░  20ms  (22%)  ← Größter CPU-Bottleneck
+  CPU dW Gradients     ██████████░░░░░░░░░░  20ms  (22%)  ← Bottleneck
   CPU Attention/RoPE   ██████░░░░░░░░░░░░░░   8ms   (9%)
   CPU RMSNorm          ███░░░░░░░░░░░░░░░░░   5ms   (5%)
   CPU Adam Update      ██░░░░░░░░░░░░░░░░░░   3ms   (3%)
   Overhead             █████████░░░░░░░░░░░  18ms  (20%)
 
-  ANE: 41%  ·  CPU: 59%  ← CPU ist der Bottleneck, nicht der ANE
+  ANE: 41%  ·  CPU: 59%
 ```
 
 ### Implementierte Optimierungen
 
-| Optimierung | Status | Ergebnis |
+| | Optimierung | Ergebnis |
 |:---|:---|:---|
-| **Dynamic Spatial Packing** — Weights als IOSurface-Input | **DONE** | 60 Compiles → **1 Compile**, ~119 Limit umgangen |
-| **FP16 Overflow Protection** — Output/Gradient-Sanitierung | **DONE** | Verhindert NaN/Inf-Divergenz |
-| **SRAM Budget Tracking** — Warnung bei >32MB | **DONE** | Diagnostik in `ane_compile()` |
-| **Compile Budget Warning** — Warnung bei 110/119 | **DONE** | Safety-Net für Legacy-Code |
+| **done** | **Dynamic Spatial Packing** — Weights als IOSurface-Input | 60 Compiles → **1 Compile**, ~119 Limit umgangen |
+| **done** | **FP16 Overflow Protection** — Output/Gradient-Sanitierung | Verhindert NaN/Inf-Divergenz |
+| **done** | **SRAM Budget Tracking** — Warnung bei >32MB | Diagnostik in `ane_compile()` |
+| **done** | **Compile Budget Warning** — Warnung bei 110/119 | Safety-Net für Legacy-Code |
 
 ### Offene Optimierungen
 
@@ -563,6 +602,7 @@ ANE-Training/
 │
 ├── README.md ·························· Dieses Dokument
 ├── ARCHITECTURE.md ···················· 4-Schichten Platform-Architektur
+├── ROADMAP.md ························· Optimierungsplan (P0 erledigt)
 ├── RESEARCH_ANE_COMPLETE.md ··········· Vollständige Forschungsdoku
 ├── SUMMARY_TECHNICAL.md ·············· Technische Zusammenfassung
 ├── SUMMARY_SIMPLE.md ················· Nicht-technische Zusammenfassung
@@ -570,16 +610,16 @@ ANE-Training/
 ├── install.sh ························· One-Liner Installer
 │
 ├── examples/ ·························· Lauffähige Demos
-│   ├── demo_train.c                     Training Demo
+│   ├── demo_train.c                     Training Demo (Dynamic Spatial Packing)
 │   ├── bench.c                          Auto-Benchmark
-│   ├── generate.c                       Text Generation
+│   ├── generate.c                       Text Generation (Dynamic Spatial Packing)
 │   ├── explore.m                        ANE Explorer
 │   └── Makefile
 │
 └── libane/ ···························· Unsere C-API
     ├── ane.h                            Stabile API (ändert sich nie)
     ├── ane.m                            Implementierung + Version-Detection
-    ├── test_ane.c                       Test-Suite
+    ├── test_ane.c                       Test-Suite (3/3 bestanden)
     ├── README.md                        API-Dokumentation
     └── Makefile
 ```
