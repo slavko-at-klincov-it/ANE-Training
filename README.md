@@ -10,13 +10,13 @@
 
 ### Reverse-Engineering Apple's Neural Engine
 
-**1 Compile · 9.4 TFLOPS · 35 Private Classes · Zero Recompilation**
+**1 Compile · Auto Peak Detection · 35 Private Classes · Zero Recompilation**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/macOS_15+-111111.svg?logo=apple&logoColor=white)](https://www.apple.com/macos/)
 [![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1--M5-FF3B30.svg)](https://support.apple.com/en-us/116943)
 [![Compile](https://img.shields.io/badge/Compile-1x_for_∞_Steps-34C759.svg)](#dynamic-spatial-packing--the-breakthrough)
-[![TFLOPS](https://img.shields.io/badge/Peak-9.4_TFLOPS-007AFF.svg)](#benchmark-results-m3-pro)
+[![TFLOPS](https://img.shields.io/badge/Peak-Auto_Detect-007AFF.svg)](#benchmark-results-m3-pro)
 [![Classes](https://img.shields.io/badge/ANE_Classes-35-FF9500.svg)](RESEARCH_ANE_COMPLETE.md)
 [![Deutsch](https://img.shields.io/badge/Deutsch-README__DE.md-lightgrey.svg)](README_DE.md)
 
@@ -38,7 +38,7 @@
 |:--|:--|
 | `35` | Private API classes discovered (previously known: only 4) |
 | `42%` | Faster with QoS Background instead of Default |
-| `9.4` | TFLOPS peak on M3 Pro (FP16) |
+| `auto` | Peak TFLOPS detected on startup (~1s) |
 | `1` | Compile is enough — unlimited training steps |
 | `3x` | Conv 1x1 faster than matmul on ANE |
 
@@ -116,16 +116,16 @@ Interactive menu — builds everything automatically.
 </table>
 
 > [!TIP]
-> `./ane` detects your hardware, builds all binaries on first run, and guides you through everything. You don't need to know any Makefiles or paths.
+> `./ane` detects your hardware, **measures ANE peak TFLOPS automatically** (~1s), builds all binaries on first run, and guides you through everything. You don't need to know any Makefiles or paths.
 
 ---
 
 ## Quick Start
 
 ```bash
-./ane                # Interactive menu
+./ane                # Interactive menu (auto-detects ANE peak TFLOPS)
 ./ane train          # Training demo (Y=2X, 1 compile, 60 steps)
-./ane bench          # Auto-benchmark (TFLOPS + chip comparison)
+./ane bench          # Full benchmark (sweep + sustained peak + chip comparison)
 ./ane generate       # Shakespeare text generation on ANE
 ./ane explore        # Explore 35 ANE classes interactively
 ./ane info           # Hardware detection
@@ -161,25 +161,40 @@ Compile count: 1 / 119 budget
 </details>
 
 <details>
-<summary><b>Auto-Benchmark</b> — <code>make bench</code></summary>
+<summary><b>Auto-Benchmark</b> — <code>./ane bench</code></summary>
 
 &nbsp;
 
-Detects your chip, measures TFLOPS, shows comparison:
+Detects your chip, sweeps kernel shapes, finds peak TFLOPS, compares to Apple spec:
 
 ```
 Chip:   h15g (M3 Pro), 16 cores
+Apple:  18 TOPS (marketing, INT8)
 
----- Single Conv Sweep (1x1 conv, ch x ch) ----
-256x256 sp64     0.1 MB   2.10  0.284 ms    7.38
-4096x4096 sp64  32.0 MB  34.36  3.841 ms    8.94
+---- Single Conv Sweep ----
+768x2048 sp256     3.0 MB   0.81  0.221 ms    3.64
+2048x2048 sp128    8.0 MB   1.07  0.346 ms    3.10
 
----- Peak Sustained (Stacked Conv) ----
-128x stacked     32.0 MB  34.36  3.647 ms    9.42
+---- Sustained Peak (5 seconds) ----
+Kernel:    768x2048 sp256 (best from sweep)
+Evals:     18400 in 5.0s
+Sustained: 2.95 TFLOPS (fp16)
 
----- Performance Overview ----
->> h15g (M3 Pro)        9.42 TFLOPS  ████████████████████████████░░
-   h16g (M4)           11.00 TFLOPS  █████████████████████████████░
+---- Chip Comparison (measured fp16 TFLOPS) ----
+>> h15g (M3 Pro)        5.46 TFLOPS  ███████████░░░░░░░░░░░░░░░░░░░
+   h16g (M4)           11.00 TFLOPS  ███████████████████████░░░░░░░
+
+---- Summary ----
+Measured peak:       5.46 TFLOPS (fp16 matmul)
+Apple marketing:     18 TOPS (INT8, theoretical)
+Efficiency:          30.3% of Apple spec
+```
+
+On startup, `./ane` runs a quick peak measurement (~1s) and shows:
+```
+  + Hardware: h15g (M3 Pro), 16 cores
+  + ANE Peak: 3.6 TFLOPS (18 TOPS Apple spec, 20%)
+  + API: v1(35)
 ```
 
 </details>
@@ -432,12 +447,17 @@ Full API documentation: **[libane/README.md](libane/README.md)**
 
 | Metric | Value | |
 |:---|---:|:---|
-| Peak FP16 | **9.36 TFLOPS** | Maximum compute throughput (small tensors) |
-| Peak FP16 (large spatial) | **18.23 TOPS** | Large tensor dimensions |
-| INT8 Speedup | **1.0–1.14x** | Not worthwhile on M3 Pro (M4: 1.88x) |
+| Measured Peak FP16 | **5.46 TFLOPS** | 128x stacked conv (amortized dispatch) |
+| Best Single Kernel | **3.64 TFLOPS** | 768×2048 sp256 |
+| Sustained Peak (5s) | **2.95 TFLOPS** | Continuous eval, no interruption |
+| Apple Marketing Spec | **18 TOPS** | INT8, theoretical |
+| Efficiency vs Spec | **30.3%** | Real fp16 matmul vs Apple INT8 TOPS |
 | Training Stories110M | **91–183 ms/step** | Depending on vocab size |
-| Kernel Compilation | **520 ms** | One-time at startup (10 kernels) |
+| Dispatch Overhead | **~0.25 ms** | Minimum latency per kernel call |
 | QoS Background vs Default | **42% faster** | Less scheduling overhead |
+
+> [!NOTE]
+> Apple's "18 TOPS" is an INT8 peak theoretical number. Real FP16 matmul throughput is lower due to dispatch overhead, memory bandwidth, and the fp16 data path being narrower than INT8. **Run `./ane bench` to measure your chip's actual peak.**
 
 <details>
 <summary><i>TFLOPS vs TOPS — what's the difference?</i></summary>
@@ -446,7 +466,7 @@ Full API documentation: **[libane/README.md](libane/README.md)**
 
 **TFLOPS** = Tera Floating-Point Operations Per Second — counts multiply+add as 2 ops.<br>
 **TOPS** = Tera Operations Per Second — counts each operation individually.<br>
-That's why TOPS can be higher than TFLOPS on the same hardware.
+That's why TOPS can be higher than TFLOPS on the same hardware. Apple publishes TOPS (INT8), we measure TFLOPS (FP16).
 
 </details>
 
