@@ -116,7 +116,23 @@ int main(void) {
     float bias[VOCAB];
     memset(bias, 0, sizeof(bias));
 
-    size_t io_bytes = (size_t)VOCAB * SEQ * 4;
+    // ===== Compile kernel ONCE using dynamic weights =====
+    int total_ch = VOCAB + VOCAB * VOCAB;
+    size_t in_bytes  = (size_t)total_ch * SEQ * 4;
+    size_t out_bytes = (size_t)VOCAB * SEQ * 4;
+
+    char *mil = ane_mil_linear_dynamic(VOCAB, VOCAB, SEQ);
+    ANEKernel *k = ane_compile(mil, strlen(mil), NULL, 0,
+                               1, &in_bytes, 1, &out_bytes,
+                               ANE_QOS_BACKGROUND);
+    if (!k) {
+        printf("  Compile failed (budget: %d/%d)\n",
+               ane_compile_count(), ANE_COMPILE_BUDGET);
+        free(mil);
+        free(encoded);
+        return 1;
+    }
+    printf("  Compiled once (dynamic weights, no recompilation needed)\n");
 
     // ===== Training =====
     printf("\n  Training bigram model on Shakespeare...\n\n");
@@ -128,38 +144,41 @@ int main(void) {
 
     for (int step = 0; step < steps; step++) {
         // Build batch: SEQ random bigram pairs
-        float input[VOCAB * SEQ];
+        float activations[VOCAB * SEQ];
         int targets[SEQ];
-        memset(input, 0, sizeof(input));
+        memset(activations, 0, sizeof(activations));
 
         for (int s = 0; s < SEQ; s++) {
             int pair_idx = rand() % n_pairs;
             int c_in = encoded[pair_idx];
             int c_out = encoded[pair_idx + 1];
-            input[c_in * SEQ + s] = 1.0f;  // one-hot
+            activations[c_in * SEQ + s] = 1.0f;  // one-hot
             targets[s] = c_out;
         }
 
-        // Forward on ANE
-        ANEWeight w = ane_weight_fp16("@model_path/weights/weight.bin", W, VOCAB, VOCAB);
-        char *mil = ane_mil_linear(VOCAB, VOCAB, SEQ, "@model_path/weights/weight.bin");
-        ANEKernel *k = ane_compile(mil, strlen(mil), &w, 1,
-                                    1, &io_bytes, 1, &io_bytes,
-                                    ANE_QOS_BACKGROUND);
-        if (!k) {
-            printf("  Compile failed at step %d (budget: %d/%d)\n",
-                   step, ane_compile_count(), ANE_COMPILE_BUDGET);
-            free(mil); ane_weight_free(&w);
-            break;
-        }
+        // Forward on ANE — pack activations + weights into input IOSurface
+        ane_lock_input(k, 0);
+        float *in_ptr = (float *)ane_input_ptr(k, 0);
+        memset(in_ptr, 0, in_bytes);
 
-        ane_write(k, 0, input, io_bytes);
+        // Activations: channels [0..VOCAB), all spatial positions
+        for (int c = 0; c < VOCAB; c++)
+            for (int s = 0; s < SEQ; s++)
+                in_ptr[c * SEQ + s] = activations[c * SEQ + s];
+
+        // Weights W[i][j]: channel (VOCAB + i*VOCAB + j), spatial position 0
+        for (int i = 0; i < VOCAB; i++)
+            for (int j = 0; j < VOCAB; j++)
+                in_ptr[(VOCAB + i * VOCAB + j) * SEQ + 0] = W[i * VOCAB + j];
+
+        ane_unlock_input(k, 0);
+
         ane_eval(k, ANE_QOS_BACKGROUND);
 
         float output[VOCAB * SEQ];
-        ane_read(k, 0, output, io_bytes);
+        ane_read(k, 0, output, out_bytes);
 
-        // Sanitize ANE output
+        // Sanitize ANE output (FP16 overflow protection)
         for (int i = 0; i < VOCAB * SEQ; i++) {
             if (isnan(output[i]) || isinf(output[i])) output[i] = 0.0f;
         }
@@ -188,7 +207,7 @@ int main(void) {
             // dW[i][j] += d_logits[i] * input[j][s]
             for (int i = 0; i < VOCAB; i++) {
                 for (int j = 0; j < VOCAB; j++) {
-                    grad_W[i * VOCAB + j] += d_logits[i] * input[j * SEQ + s];
+                    grad_W[i * VOCAB + j] += d_logits[i] * activations[j * SEQ + s];
                 }
                 bias[i] -= lr * d_logits[i] / SEQ;
             }
@@ -208,47 +227,37 @@ int main(void) {
 
         if (step < 3 || step % 5 == 0 || step == steps - 1)
             printf("  %-4d   %8.4f  %8.2f\n", step, loss, expf(loss));
-
-        ane_free(k);
-        free(mil);
-        ane_weight_free(&w);
     }
 
     // ===== Generation =====
+    // Reuse the same kernel — just pack updated weights each eval
     printf("\n  Generating text (200 chars, temperature=0.8)...\n");
     printf("  -------------------------------------------\n  ");
-
-    // Compile generation kernel with final trained weights
-    ANEWeight w_gen = ane_weight_fp16("@model_path/weights/weight.bin", W, VOCAB, VOCAB);
-    char *mil_gen = ane_mil_linear(VOCAB, VOCAB, SEQ, "@model_path/weights/weight.bin");
-    ANEKernel *gen_k = ane_compile(mil_gen, strlen(mil_gen), &w_gen, 1,
-                                    1, &io_bytes, 1, &io_bytes,
-                                    ANE_QOS_BACKGROUND);
-
-    if (!gen_k) {
-        printf("\n  Could not compile generation kernel (budget: %d/%d)\n",
-               ane_compile_count(), ANE_COMPILE_BUDGET);
-        free(mil_gen);
-        ane_weight_free(&w_gen);
-        free(encoded);
-        return 0;
-    }
 
     // Start with a random character
     int current = char_to_idx[(int)'T'];
     float temperature = 0.8f;
 
     for (int g = 0; g < 200; g++) {
-        // One-hot input for current char (use position 0 of SEQ)
-        float gen_input[VOCAB * SEQ];
-        memset(gen_input, 0, sizeof(gen_input));
-        gen_input[current * SEQ + 0] = 1.0f;
+        // Pack one-hot input for current char + trained weights
+        ane_lock_input(k, 0);
+        float *gen_ptr = (float *)ane_input_ptr(k, 0);
+        memset(gen_ptr, 0, in_bytes);
 
-        ane_write(gen_k, 0, gen_input, io_bytes);
-        ane_eval(gen_k, ANE_QOS_BACKGROUND);
+        // Activation: one-hot at position 0
+        gen_ptr[current * SEQ + 0] = 1.0f;
+
+        // Weights W[i][j]: channel (VOCAB + i*VOCAB + j), spatial position 0
+        for (int i = 0; i < VOCAB; i++)
+            for (int j = 0; j < VOCAB; j++)
+                gen_ptr[(VOCAB + i * VOCAB + j) * SEQ + 0] = W[i * VOCAB + j];
+
+        ane_unlock_input(k, 0);
+
+        ane_eval(k, ANE_QOS_BACKGROUND);
 
         float gen_output[VOCAB * SEQ];
-        ane_read(gen_k, 0, gen_output, io_bytes);
+        ane_read(k, 0, gen_output, out_bytes);
 
         // Get logits for position 0
         float probs[VOCAB];
@@ -265,9 +274,9 @@ int main(void) {
 
     printf("\n  -------------------------------------------\n");
 
-    ane_free(gen_k);
-    free(mil_gen);
-    ane_weight_free(&w_gen);
+    // Cleanup — kernel freed once, after both training and generation
+    ane_free(k);
+    free(mil);
     free(encoded);
 
     printf("\n  Compiles used: %d / %d\n\n", ane_compile_count(), ANE_COMPILE_BUDGET);

@@ -199,11 +199,10 @@ char *ane_mil_header(void);
 // Get current compile count (for exec() restart budgeting).
 int ane_compile_count(void);
 
-// Reload weights without recompilation (delta compilation).
-// Unloads the model, patches weight files on disk, reloads.
-// The weights array must have same count and names as the original compile.
-// Returns true on success. On failure, caller should fall back to ane_compile().
-// Does NOT count toward the compile budget.
+// EXPERIMENTAL: Reload weights via disk patching (delta compilation).
+// In practice, ANE bakes weights into HWX at compile time and does not
+// re-read them on reload. Use ane_mil_linear_dynamic() instead for training.
+// Returns true if reload succeeded, false otherwise.
 bool ane_reload_weights(ANEKernel *k, const ANEWeight *weights, int n_weights, ANEQoS qos);
 
 // Free a compiled kernel and all resources.

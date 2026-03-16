@@ -4,37 +4,36 @@ Stand: März 2026. Basierend auf Analyse des Orion Papers, NeuralForge, eiln/ane
 
 ---
 
-## P0 — Sofort umsetzbar
+## P0 — Erledigt
 
-### 1. Delta Compilation (8.5x Speedup)
+### 1. Dynamic Spatial Packing (Zero Recompilation) — DONE
 
-**Problem:** Aktuell wird bei jedem Weight-Update der gesamte ANE-Kernel neu kompiliert (4200ms).
+**Problem:** ANE bakt Weights beim Compile ins HWX-Binary. Jeder Weight-Update erfordert Recompilation. Limit: ~119 Compilations pro Prozess.
 
-**Lösung:** Unload → BLOBFILE auf Disk patchen → Reload.
+**Lösung:** Weights als Input-IOSurface-Channels statt BLOBFILE-Konstanten. Compile einmal, Weights per IOSurface-Write updaten.
 
 ```
-Aktuell:     compile(mil + weights) → 4200ms pro Step
-Delta:       unload() → patch BLOBFILE → reload() → 494ms pro Step
+Vorher:      compile(mil + weights) → 60 Compiles für 60 Steps
+Nachher:     compile(mil_dynamic) → 1 Compile für ∞ Steps
 ```
 
 **Implementierung:**
-1. Nach erstem `ane_compile()`: HWX-Pfad aus NSTemporaryDirectory merken
-2. `_ANEModel.unloadWithQoS(9)` aufrufen
-3. Weight-Blob im BLOBFILE direkt überschreiben (FP16 binary, Offset bekannt)
-4. `_ANEModel.loadWithQoS(9)` — Programm-Identity bleibt erhalten wenn MIL-Text + Weight-Keys identisch
-5. Ownership des temp-Verzeichnisses vor Release transferieren (sonst wird es gelöscht)
+- `ane_mil_linear_dynamic()` — MIL mit Weights-als-Input (slice → reshape → matmul)
+- `ane_write_dynamic_weights()` — packt W[out][in] ins korrekte IOSurface-Layout
+- Input: `[1, in_ch + in_ch*out_ch, 1, seq]` — Aktivierungen + Weights zusammen
+- Beide Training-Demos (`demo_train.c`, `generate.c`) umgestellt
 
-**Quelle:** Orion Paper Section 4.2, Delta Compilation
+**Ergebnis:** Compile count 1 statt 60. ~119 Limit komplett umgangen. 0.1ms/step.
 
-**Dateien:** `libane/ane.m` (neue Funktion `ane_reload_weights()`), `examples/demo_train.c`
+**RE-Erkenntnis:** Delta Compilation (Disk-Patching nach Unload/Reload) funktioniert NICHT — ANE bakt Weights ins HWX und liest sie nicht erneut von Disk. `ane_reload_weights()` bleibt als EXPERIMENTAL API erhalten.
 
 ---
 
-### 2. FP16 Overflow Protection
+### 2. FP16 Overflow Protection — DONE
 
 **Problem:** FP16 max = 65504. Softmax/RMSNorm können Overflow verursachen → NaN → Training divergiert.
 
-**Lösung:** Aktivierungen clampen, Gradienten sanitizen.
+**Lösung:** Aktivierungen clampen, Gradienten sanitizen. Implementiert in `demo_train.c` und `generate.c`.
 
 ```c
 // Vor Softmax/RMSNorm:
@@ -52,7 +51,7 @@ for (int i = 0; i < n; i++) {
 
 ---
 
-### 3. Process-Restart bei ~119 Compilations
+### 3. Process-Restart bei ~119 Compilations — OBSOLET (durch DSP gelöst)
 
 **Problem:** ANE erlaubt ~119 Compilations pro Prozess, dann stille Fehler.
 
@@ -76,7 +75,7 @@ ANEKernel *ane_compile(...) {
 
 ---
 
-### 4. Zero-Copy für Weight-Updates
+### 4. Zero-Copy für Weight-Updates — DONE (Teil von DSP)
 
 **Problem:** `ane_write()` macht Lock → memcpy → Unlock (55-65µs pro Call).
 
@@ -99,7 +98,7 @@ ane_unlock_input(k, 0);
 
 ---
 
-### 5. SRAM Budget Tracking
+### 5. SRAM Budget Tracking — DONE
 
 **Problem:** M3 Pro SRAM ~16MB, Throughput-Drop ab 73.5MB, Cliff bei 129MB.
 
