@@ -142,11 +142,52 @@ cmd_test() {
     echo ""
 }
 
+cmd_about() {
+    echo ""
+    echo -e "  ${BOLD}Was ist ANE-Training?${NC}"
+    echo ""
+    echo -e "  Dein Mac hat einen ${W}Neural Engine (ANE)${NC} — einen KI-Chip mit 16 Cores"
+    echo -e "  und bis zu 38 TOPS. Apple erlaubt offiziell nur Inference (CoreML)."
+    echo -e "  Dieses Projekt knackt diese Beschränkung: ${G}Training direkt auf dem ANE.${NC}"
+    echo ""
+    echo -e "  ${BOLD}Warum ist das besser als normales Training?${NC}"
+    echo ""
+    echo -e "  ${W}CPU-Training${NC}          Langsam. Dein M-Chip hat 10-20 TOPS auf der CPU,"
+    echo -e "                        aber der ANE liefert ${W}9-38 TFLOPS${NC} für Matrix-Ops."
+    echo ""
+    echo -e "  ${W}GPU-Training (MLX)${NC}    Gut für große Modelle, aber braucht viel Strom"
+    echo -e "                        und teilt sich den Speicher mit allem anderen."
+    echo -e "                        Der ANE arbeitet ${W}isoliert und stromsparend${NC}."
+    echo ""
+    echo -e "  ${W}ANE-Training${NC}          ${G}Direkt auf dem KI-Beschleuniger.${NC}"
+    echo -e "                        9.4 TFLOPS auf M3 Pro, bis zu 38 TOPS auf M4."
+    echo -e "                        Zero-Copy I/O, Background-QoS (42% schneller)."
+    echo -e "                        ${W}1 Compile für unbegrenzt viele Training-Steps.${NC}"
+    echo ""
+    echo -e "  ${BOLD}Das Besondere (USP):${NC}"
+    echo ""
+    echo -e "  ${C}1.${NC} ${W}Dynamic Spatial Packing${NC} — Weights als IOSurface-Input statt BLOBFILE."
+    echo -e "     Einmal kompilieren, Weights beliebig oft ändern. Kein Recompile-Limit."
+    echo ""
+    echo -e "  ${C}2.${NC} ${W}35 private API-Klassen${NC} entdeckt (andere Projekte kennen nur 4)."
+    echo -e "     Version-Detection: überlebt Apple API-Änderungen automatisch."
+    echo ""
+    echo -e "  ${C}3.${NC} ${W}Stabile C-API (libane)${NC} — 73KB, von jeder Sprache nutzbar."
+    echo -e "     Dein Code gegen ane.h bricht nie, egal was Apple ändert."
+    echo ""
+    echo -e "  ${C}4.${NC} ${W}100% lokal, 100% privat.${NC} Kein Cloud-Service, kein Account,"
+    echo -e "     keine Daten die dein Gerät verlassen."
+    echo ""
+    echo -e "  ${D}Mehr: ./ane help (Befehle) | README.md (Doku) | ROADMAP.md (Nächste Schritte)${NC}"
+    echo ""
+}
+
 cmd_help() {
     echo ""
     echo -e "  ${BOLD}Befehle:${NC}"
     echo ""
     echo -e "    ${C}./ane${NC}              Interaktives Menü"
+    echo -e "    ${C}./ane about${NC}        Was ist das? Warum ANE-Training?"
     echo -e "    ${C}./ane train${NC}        Training Demo (Y=2X, Dynamic Spatial Packing)"
     echo -e "    ${C}./ane bench${NC}        Auto-Benchmark (TFLOPS + Chip-Vergleich)"
     echo -e "    ${C}./ane generate${NC}     Shakespeare Text-Generation auf ANE"
@@ -205,6 +246,7 @@ cmd_menu() {
         echo -e "    ${W}5${NC}  Hardware Info         ${D}Chip, Cores, API-Status${NC}"
         echo -e "    ${W}6${NC}  libane Tests          ${D}Test-Suite laufen lassen${NC}"
         echo ""
+        echo -e "    ${W}?${NC}  Was ist das?           ${D}Warum ANE-Training? USP.${NC}"
         echo -e "    ${W}d${NC}  Dokumentation         ${D}README im Browser öffnen${NC}"
         echo -e "    ${W}q${NC}  Beenden"
         echo ""
@@ -219,6 +261,7 @@ cmd_menu() {
             4) cmd_explore ;;
             5) cmd_info ;;
             6) cmd_test ;;
+            '?'|about) cmd_about ;;
             d|D)
                 if [ -f "$DIR/README.md" ]; then
                     if command -v open &>/dev/null; then
@@ -236,6 +279,7 @@ cmd_menu() {
 
 # ===== Main =====
 case "${1:-}" in
+    about|what|"?") cmd_about ;;
     train)    cmd_train ;;
     bench)    cmd_bench ;;
     generate) cmd_generate ;;
