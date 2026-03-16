@@ -8,8 +8,42 @@
 #        ./ane info         (hardware info)
 #        ./ane test         (run libane tests)
 #        ./ane help         (show commands)
+#        ./ane --lang=de    (force German)
+#        ./ane --lang=en    (force English)
+#        ANE_LANG=de ./ane  (German via env)
 
 set -e
+
+# ===== Language Detection =====
+# Priority: --lang=xx flag > ANE_LANG env > system locale > English default
+_LANG_FLAG=""
+for arg in "$@"; do
+    case "$arg" in
+        --lang=de) _LANG_FLAG=de ;;
+        --lang=en) _LANG_FLAG=en ;;
+    esac
+done
+
+if [ -n "$_LANG_FLAG" ]; then
+    # Explicit --lang flag: highest priority
+    L="$_LANG_FLAG"
+elif [ -n "${ANE_LANG:-}" ]; then
+    # ANE_LANG env var: second priority
+    L="$ANE_LANG"
+else
+    # System locale detection: default English, German if locale is de
+    LANG_CODE="${LANG:-en}"
+    if [[ "$LANG_CODE" == de* ]] || [[ "${LC_ALL:-}" == de* ]]; then
+        L=de
+    else
+        L=en
+    fi
+fi
+
+# Bilingual string helper: t "English" "German"
+t() {
+    if [ "$L" = "de" ]; then echo "$2"; else echo "$1"; fi
+}
 
 # ===== Paths =====
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -36,12 +70,12 @@ dim()  { echo -e "  ${D}$1${NC}"; }
 # ===== System Check =====
 check_system() {
     if [ "$(uname -m)" != "arm64" ]; then
-        fail "Apple Silicon erforderlich (du hast: $(uname -m))"
+        fail "$(t "Apple Silicon required (you have: $(uname -m))" "Apple Silicon erforderlich (du hast: $(uname -m))")"
         exit 1
     fi
     if ! xcode-select -p &>/dev/null; then
-        fail "Xcode Command Line Tools nicht gefunden"
-        info "Installiere mit: xcode-select --install"
+        fail "$(t "Xcode Command Line Tools not found" "Xcode Command Line Tools nicht gefunden")"
+        info "$(t "Install with: xcode-select --install" "Installiere mit: xcode-select --install")"
         exit 1
     fi
 }
@@ -51,9 +85,9 @@ ensure_built() {
     local target="$1"
     local binary="$2"
     if [ ! -f "$EXAMPLES/$binary" ]; then
-        echo -e "  ${D}Baue $binary ...${NC}"
+        echo -e "  ${D}$(t "Building $binary ..." "Baue $binary ...")${NC}"
         (cd "$EXAMPLES" && make "$target" 2>/dev/null) || {
-            fail "Build fehlgeschlagen. Versuche: cd examples && make $target"
+            fail "$(t "Build failed. Try: cd examples && make $target" "Build fehlgeschlagen. Versuche: cd examples && make $target")"
             return 1
         }
     fi
@@ -68,13 +102,13 @@ ensure_all_built() {
 
     if [ $needed -eq 1 ]; then
         echo ""
-        info "Erstmaliger Start — baue alle Binaries ..."
+        info "$(t "First run — building all binaries ..." "Erstmaliger Start — baue alle Binaries ...")"
         echo ""
         (cd "$EXAMPLES" && make all 2>&1 | while read -r line; do dim "  $line"; done) || {
-            fail "Build fehlgeschlagen"
+            fail "$(t "Build failed" "Build fehlgeschlagen")"
             exit 1
         }
-        ok "Alle Binaries gebaut"
+        ok "$(t "All binaries built" "Alle Binaries gebaut")"
         echo ""
     fi
 }
@@ -85,7 +119,7 @@ cmd_info() {
     ensure_built "demo_train" "demo_train"
 
     echo ""
-    echo -e "  ${BOLD}Hardware-Erkennung${NC}"
+    echo -e "  ${BOLD}$(t "Hardware Info" "Hardware-Erkennung")${NC}"
     echo ""
 
     # Run a quick ANE init to get hardware info
@@ -136,7 +170,7 @@ cmd_explore() {
 cmd_test() {
     check_system
     echo ""
-    info "libane Tests ..."
+    info "$(t "Running libane tests ..." "libane Tests ...")"
     echo ""
     (cd "$LIBANE" && make test 2>&1)
     echo ""
@@ -144,57 +178,101 @@ cmd_test() {
 
 cmd_about() {
     echo ""
-    echo -e "  ${BOLD}Was ist ANE-Training?${NC}"
-    echo ""
-    echo -e "  Dein Mac hat einen ${W}Neural Engine (ANE)${NC} — einen KI-Chip mit 16 Cores"
-    echo -e "  und bis zu 38 TOPS. Apple erlaubt offiziell nur Inference (CoreML)."
-    echo -e "  Dieses Projekt knackt diese Beschränkung: ${G}Training direkt auf dem ANE.${NC}"
-    echo ""
-    echo -e "  ${BOLD}Warum ist das besser als normales Training?${NC}"
-    echo ""
-    echo -e "  ${W}CPU-Training${NC}          Langsam. Dein M-Chip hat 10-20 TOPS auf der CPU,"
-    echo -e "                        aber der ANE liefert ${W}9-38 TFLOPS${NC} für Matrix-Ops."
-    echo ""
-    echo -e "  ${W}GPU-Training (MLX)${NC}    Gut für große Modelle, aber braucht viel Strom"
-    echo -e "                        und teilt sich den Speicher mit allem anderen."
-    echo -e "                        Der ANE arbeitet ${W}isoliert und stromsparend${NC}."
-    echo ""
-    echo -e "  ${W}ANE-Training${NC}          ${G}Direkt auf dem KI-Beschleuniger.${NC}"
-    echo -e "                        9.4 TFLOPS auf M3 Pro, bis zu 38 TOPS auf M4."
-    echo -e "                        Zero-Copy I/O, Background-QoS (42% schneller)."
-    echo -e "                        ${W}1 Compile für unbegrenzt viele Training-Steps.${NC}"
-    echo ""
-    echo -e "  ${BOLD}Das Besondere (USP):${NC}"
-    echo ""
-    echo -e "  ${C}1.${NC} ${W}Dynamic Spatial Packing${NC} — Weights als IOSurface-Input statt BLOBFILE."
-    echo -e "     Einmal kompilieren, Weights beliebig oft ändern. Kein Recompile-Limit."
-    echo ""
-    echo -e "  ${C}2.${NC} ${W}35 private API-Klassen${NC} entdeckt (andere Projekte kennen nur 4)."
-    echo -e "     Version-Detection: überlebt Apple API-Änderungen automatisch."
-    echo ""
-    echo -e "  ${C}3.${NC} ${W}Stabile C-API (libane)${NC} — 73KB, von jeder Sprache nutzbar."
-    echo -e "     Dein Code gegen ane.h bricht nie, egal was Apple ändert."
-    echo ""
-    echo -e "  ${C}4.${NC} ${W}100% lokal, 100% privat.${NC} Kein Cloud-Service, kein Account,"
-    echo -e "     keine Daten die dein Gerät verlassen."
-    echo ""
-    echo -e "  ${D}Mehr: ./ane help (Befehle) | README.md (Doku) | ROADMAP.md (Nächste Schritte)${NC}"
+    if [ "$L" = "de" ]; then
+        echo -e "  ${BOLD}Was ist ANE-Training?${NC}"
+        echo ""
+        echo -e "  Dein Mac hat einen ${W}Neural Engine (ANE)${NC} — einen KI-Chip mit 16 Cores"
+        echo -e "  und bis zu 38 TOPS. Apple erlaubt offiziell nur Inference (CoreML)."
+        echo -e "  Dieses Projekt knackt diese Beschränkung: ${G}Training direkt auf dem ANE.${NC}"
+        echo ""
+        echo -e "  ${BOLD}Warum ist das besser als normales Training?${NC}"
+        echo ""
+        echo -e "  ${W}CPU-Training${NC}          Langsam. Dein M-Chip hat 10-20 TOPS auf der CPU,"
+        echo -e "                        aber der ANE liefert ${W}9-38 TFLOPS${NC} für Matrix-Ops."
+        echo ""
+        echo -e "  ${W}GPU-Training (MLX)${NC}    Gut für große Modelle, aber braucht viel Strom"
+        echo -e "                        und teilt sich den Speicher mit allem anderen."
+        echo -e "                        Der ANE arbeitet ${W}isoliert und stromsparend${NC}."
+        echo ""
+        echo -e "  ${W}ANE-Training${NC}          ${G}Direkt auf dem KI-Beschleuniger.${NC}"
+        echo -e "                        9.4 TFLOPS auf M3 Pro, bis zu 38 TOPS auf M4."
+        echo -e "                        Zero-Copy I/O, Background-QoS (42% schneller)."
+        echo -e "                        ${W}1 Compile für unbegrenzt viele Training-Steps.${NC}"
+        echo ""
+        echo -e "  ${BOLD}Das Besondere (USP):${NC}"
+        echo ""
+        echo -e "  ${C}1.${NC} ${W}Dynamic Spatial Packing${NC} — Weights als IOSurface-Input statt BLOBFILE."
+        echo -e "     Einmal kompilieren, Weights beliebig oft ändern. Kein Recompile-Limit."
+        echo ""
+        echo -e "  ${C}2.${NC} ${W}35 private API-Klassen${NC} entdeckt (andere Projekte kennen nur 4)."
+        echo -e "     Version-Detection: überlebt Apple API-Änderungen automatisch."
+        echo ""
+        echo -e "  ${C}3.${NC} ${W}Stabile C-API (libane)${NC} — 73KB, von jeder Sprache nutzbar."
+        echo -e "     Dein Code gegen ane.h bricht nie, egal was Apple ändert."
+        echo ""
+        echo -e "  ${C}4.${NC} ${W}100% lokal, 100% privat.${NC} Kein Cloud-Service, kein Account,"
+        echo -e "     keine Daten die dein Gerät verlassen."
+        echo ""
+        echo -e "  ${D}Mehr: ./ane help (Befehle) | README.md (Doku) | ROADMAP.md (Nächste Schritte)${NC}"
+    else
+        echo -e "  ${BOLD}What is ANE-Training?${NC}"
+        echo ""
+        echo -e "  Your Mac has a ${W}Neural Engine (ANE)${NC} — an AI chip with 16 cores"
+        echo -e "  and up to 38 TOPS. Apple officially only allows inference (CoreML)."
+        echo -e "  This project breaks that restriction: ${G}training directly on the ANE.${NC}"
+        echo ""
+        echo -e "  ${BOLD}Why is this better than normal training?${NC}"
+        echo ""
+        echo -e "  ${W}CPU Training${NC}          Slow. Your M-chip has 10-20 TOPS on the CPU,"
+        echo -e "                        but the ANE delivers ${W}9-38 TFLOPS${NC} for matrix ops."
+        echo ""
+        echo -e "  ${W}GPU Training (MLX)${NC}    Good for large models, but power-hungry"
+        echo -e "                        and shares memory with everything else."
+        echo -e "                        The ANE runs ${W}isolated and power-efficient${NC}."
+        echo ""
+        echo -e "  ${W}ANE Training${NC}          ${G}Directly on the AI accelerator.${NC}"
+        echo -e "                        9.4 TFLOPS on M3 Pro, up to 38 TOPS on M4."
+        echo -e "                        Zero-copy I/O, background QoS (42% faster)."
+        echo -e "                        ${W}1 compile for unlimited training steps.${NC}"
+        echo ""
+        echo -e "  ${BOLD}Key Differentiators:${NC}"
+        echo ""
+        echo -e "  ${C}1.${NC} ${W}Dynamic Spatial Packing${NC} — Weights as IOSurface input instead of BLOBFILE."
+        echo -e "     Compile once, change weights as often as you want. No recompile limit."
+        echo ""
+        echo -e "  ${C}2.${NC} ${W}35 private API classes${NC} discovered (other projects know only 4)."
+        echo -e "     Version detection: survives Apple API changes automatically."
+        echo ""
+        echo -e "  ${C}3.${NC} ${W}Stable C API (libane)${NC} — 73KB, usable from any language."
+        echo -e "     Your code against ane.h never breaks, no matter what Apple changes."
+        echo ""
+        echo -e "  ${C}4.${NC} ${W}100% local, 100% private.${NC} No cloud service, no account,"
+        echo -e "     no data ever leaves your device."
+        echo ""
+        echo -e "  ${D}More: ./ane help (commands) | README.md (docs) | ROADMAP.md (next steps)${NC}"
+    fi
     echo ""
 }
 
 cmd_help() {
     echo ""
-    echo -e "  ${BOLD}Befehle:${NC}"
+    echo -e "  ${BOLD}$(t "Commands:" "Befehle:")${NC}"
     echo ""
-    echo -e "    ${C}./ane${NC}              Interaktives Menü"
-    echo -e "    ${C}./ane about${NC}        Was ist das? Warum ANE-Training?"
-    echo -e "    ${C}./ane train${NC}        Training Demo (Y=2X, Dynamic Spatial Packing)"
-    echo -e "    ${C}./ane bench${NC}        Auto-Benchmark (TFLOPS + Chip-Vergleich)"
-    echo -e "    ${C}./ane generate${NC}     Shakespeare Text-Generation auf ANE"
-    echo -e "    ${C}./ane explore${NC}      ANE Framework Explorer (35 Klassen)"
-    echo -e "    ${C}./ane info${NC}         Hardware-Erkennung"
-    echo -e "    ${C}./ane test${NC}         libane Test-Suite"
-    echo -e "    ${C}./ane help${NC}         Diese Hilfe"
+    echo -e "    ${C}./ane${NC}              $(t "Interactive menu" "Interaktives Menü")"
+    echo -e "    ${C}./ane about${NC}        $(t "What is this? Why ANE training?" "Was ist das? Warum ANE-Training?")"
+    echo -e "    ${C}./ane train${NC}        $(t "Training Demo (Y=2X, Dynamic Spatial Packing)" "Training Demo (Y=2X, Dynamic Spatial Packing)")"
+    echo -e "    ${C}./ane bench${NC}        $(t "Auto-Benchmark (TFLOPS + chip comparison)" "Auto-Benchmark (TFLOPS + Chip-Vergleich)")"
+    echo -e "    ${C}./ane generate${NC}     $(t "Shakespeare text generation on ANE" "Shakespeare Text-Generation auf ANE")"
+    echo -e "    ${C}./ane explore${NC}      $(t "ANE Framework Explorer (35 classes)" "ANE Framework Explorer (35 Klassen)")"
+    echo -e "    ${C}./ane info${NC}         $(t "Hardware Info" "Hardware-Erkennung")"
+    echo -e "    ${C}./ane test${NC}         $(t "libane Test Suite" "libane Test-Suite")"
+    echo -e "    ${C}./ane help${NC}         $(t "This help" "Diese Hilfe")"
+    echo ""
+    echo -e "  ${BOLD}$(t "Language:" "Sprache:")${NC}"
+    echo ""
+    echo -e "    ${C}./ane --lang=en${NC}    $(t "Force English" "Englisch erzwingen")"
+    echo -e "    ${C}./ane --lang=de${NC}    $(t "Force German" "Deutsch erzwingen")"
+    echo -e "    ${C}ANE_LANG=de ./ane${NC}  $(t "German via environment variable" "Deutsch via Umgebungsvariable")"
     echo ""
 }
 
@@ -239,18 +317,18 @@ cmd_menu() {
         echo ""
         echo -e "  ${D}─────────────────────────────────────${NC}"
         echo ""
-        echo -e "    ${W}1${NC}  Training Demo       ${D}Train Y=2X, 1 Compile, 60 Steps${NC}"
-        echo -e "    ${W}2${NC}  Benchmark            ${D}Messe deine ANE TFLOPS${NC}"
-        echo -e "    ${W}3${NC}  Text Generation      ${D}Shakespeare auf dem ANE${NC}"
-        echo -e "    ${W}4${NC}  ANE Explorer          ${D}35 private Klassen erkunden${NC}"
-        echo -e "    ${W}5${NC}  Hardware Info         ${D}Chip, Cores, API-Status${NC}"
-        echo -e "    ${W}6${NC}  libane Tests          ${D}Test-Suite laufen lassen${NC}"
+        echo -e "    ${W}1${NC}  Training Demo       ${D}$(t "Train Y=2X, 1 compile, 60 steps" "Train Y=2X, 1 Compile, 60 Steps")${NC}"
+        echo -e "    ${W}2${NC}  Benchmark            ${D}$(t "Measure your ANE TFLOPS" "Messe deine ANE TFLOPS")${NC}"
+        echo -e "    ${W}3${NC}  Text Generation      ${D}$(t "Shakespeare on the ANE" "Shakespeare auf dem ANE")${NC}"
+        echo -e "    ${W}4${NC}  ANE Explorer          ${D}$(t "Explore 35 private classes" "35 private Klassen erkunden")${NC}"
+        echo -e "    ${W}5${NC}  $(t "Hardware Info" "Hardware Info")         ${D}$(t "Chip, cores, API status" "Chip, Cores, API-Status")${NC}"
+        echo -e "    ${W}6${NC}  $(t "libane Test Suite" "libane Tests")          ${D}$(t "Run the test suite" "Test-Suite laufen lassen")${NC}"
         echo ""
-        echo -e "    ${W}?${NC}  Was ist das?           ${D}Warum ANE-Training? USP.${NC}"
-        echo -e "    ${W}d${NC}  Dokumentation         ${D}README im Browser öffnen${NC}"
-        echo -e "    ${W}q${NC}  Beenden"
+        echo -e "    ${W}?${NC}  $(t "What is this?" "Was ist das?")           ${D}$(t "Why ANE training? Key differentiators." "Warum ANE-Training? USP.")${NC}"
+        echo -e "    ${W}d${NC}  $(t "Documentation" "Dokumentation")         ${D}$(t "Open README in browser" "README im Browser öffnen")${NC}"
+        echo -e "    ${W}q${NC}  $(t "Quit" "Beenden")"
         echo ""
-        echo -ne "  ${BOLD}Auswahl: ${NC}"
+        echo -ne "  ${BOLD}$(t "Select:" "Auswahl:") ${NC}"
 
         read -r choice
 
@@ -272,13 +350,22 @@ cmd_menu() {
                 fi
                 ;;
             q|Q|"") echo ""; break ;;
-            *) fail "Unbekannte Auswahl: $choice" ;;
+            *) fail "$(t "Unknown selection: $choice" "Unbekannte Auswahl: $choice")" ;;
         esac
     done
 }
 
 # ===== Main =====
-case "${1:-}" in
+# Strip --lang flags from positional args
+ARGS=()
+for arg in "$@"; do
+    case "$arg" in
+        --lang=*) ;;  # already handled above
+        *) ARGS+=("$arg") ;;
+    esac
+done
+
+case "${ARGS[0]:-}" in
     about|what|"?") cmd_about ;;
     train)    cmd_train ;;
     bench)    cmd_bench ;;
@@ -289,7 +376,7 @@ case "${1:-}" in
     help|-h|--help) cmd_help ;;
     "")       cmd_menu ;;
     *)
-        fail "Unbekannter Befehl: $1"
+        fail "$(t "Unknown command: ${ARGS[0]}" "Unbekannter Befehl: ${ARGS[0]}")"
         cmd_help
         exit 1
         ;;
