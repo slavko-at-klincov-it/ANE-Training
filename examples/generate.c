@@ -55,6 +55,9 @@ static const char *SHAKESPEARE =
 
 // ===== Softmax =====
 static void softmax(float *x, int n) {
+    // Clamp to FP16 safe range before softmax
+    for (int i = 0; i < n; i++)
+        x[i] = fminf(fmaxf(x[i], -65504.0f), 65504.0f);
     float max_val = x[0];
     for (int i = 1; i < n; i++) if (x[i] > max_val) max_val = x[i];
     float sum = 0;
@@ -144,7 +147,8 @@ int main(void) {
                                     1, &io_bytes, 1, &io_bytes,
                                     ANE_QOS_BACKGROUND);
         if (!k) {
-            printf("  Compile failed at step %d (budget: %d/119)\n", step, ane_compile_count());
+            printf("  Compile failed at step %d (budget: %d/%d)\n",
+                   step, ane_compile_count(), ANE_COMPILE_BUDGET);
             free(mil); ane_weight_free(&w);
             break;
         }
@@ -154,6 +158,11 @@ int main(void) {
 
         float output[VOCAB * SEQ];
         ane_read(k, 0, output, io_bytes);
+
+        // Sanitize ANE output
+        for (int i = 0; i < VOCAB * SEQ; i++) {
+            if (isnan(output[i]) || isinf(output[i])) output[i] = 0.0f;
+        }
 
         // Cross-entropy loss + gradient
         float loss = 0;
@@ -186,6 +195,14 @@ int main(void) {
         }
         loss /= SEQ;
 
+        if (isnan(loss)) { printf("  NaN loss at step %d, stopping\n", step); break; }
+
+        // Sanitize gradients
+        for (int i = 0; i < VOCAB * VOCAB; i++) {
+            if (isnan(grad_W[i])) grad_W[i] = 0.0f;
+            if (isinf(grad_W[i])) grad_W[i] = copysignf(65504.0f, grad_W[i]);
+        }
+
         // SGD update
         for (int i = 0; i < VOCAB * VOCAB; i++) W[i] -= lr * grad_W[i] / SEQ;
 
@@ -201,7 +218,7 @@ int main(void) {
     printf("\n  Generating text (200 chars, temperature=0.8)...\n");
     printf("  -------------------------------------------\n  ");
 
-    // Compile one final kernel for generation
+    // Compile generation kernel with final trained weights
     ANEWeight w_gen = ane_weight_fp16("@model_path/weights/weight.bin", W, VOCAB, VOCAB);
     char *mil_gen = ane_mil_linear(VOCAB, VOCAB, SEQ, "@model_path/weights/weight.bin");
     ANEKernel *gen_k = ane_compile(mil_gen, strlen(mil_gen), &w_gen, 1,
@@ -209,7 +226,8 @@ int main(void) {
                                     ANE_QOS_BACKGROUND);
 
     if (!gen_k) {
-        printf("\n  Could not compile generation kernel (budget: %d/119)\n", ane_compile_count());
+        printf("\n  Could not compile generation kernel (budget: %d/%d)\n",
+               ane_compile_count(), ANE_COMPILE_BUDGET);
         free(mil_gen);
         ane_weight_free(&w_gen);
         free(encoded);
@@ -252,6 +270,6 @@ int main(void) {
     ane_weight_free(&w_gen);
     free(encoded);
 
-    printf("\n  Compiles used: %d / 119\n\n", ane_compile_count());
+    printf("\n  Compiles used: %d / %d\n\n", ane_compile_count(), ANE_COMPILE_BUDGET);
     return 0;
 }

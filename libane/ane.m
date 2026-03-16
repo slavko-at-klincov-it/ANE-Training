@@ -133,6 +133,9 @@ struct ANEKernel {
     int nIn, nOut;
     size_t *inBytes;
     size_t *outBytes;
+    // Delta compilation support
+    void *milData;          // Copy of MIL text for reload
+    size_t milLen;
 };
 
 // ===== IOSurface creation =====
@@ -453,11 +456,27 @@ ANEKernel *ane_compile(const char *mil, size_t mil_len,
         }
 
         __sync_fetch_and_add(&g_compiles, 1);
+        if (g_compiles >= ANE_COMPILE_SAFE_LIMIT) {
+            fprintf(stderr, "libane: WARNING: %d/%d compile budget used — "
+                    "save checkpoint and restart process soon\n",
+                    g_compiles, ANE_COMPILE_BUDGET);
+        }
+
+        // SRAM budget check
+        size_t total_io = 0;
+        for (int i = 0; i < n_inputs; i++) total_io += input_sizes[i];
+        for (int i = 0; i < n_outputs; i++) total_io += output_sizes[i];
+        if (total_io > 32 * 1024 * 1024)
+            fprintf(stderr, "libane: WARNING: total I/O %zuMB exceeds ANE SRAM (~32MB), "
+                    "expect ~30%% throughput drop\n", total_io >> 20);
 
         // Build kernel handle
         ANEKernel *k = (ANEKernel *)calloc(1, sizeof(ANEKernel));
         k->model = mdl;
         k->tmpDir = td;
+        k->milData = malloc(mil_len);
+        memcpy(k->milData, mil, mil_len);
+        k->milLen = mil_len;
         k->nIn = n_inputs;
         k->nOut = n_outputs;
         k->inBytes = (size_t *)malloc(n_inputs * sizeof(size_t));
@@ -719,6 +738,72 @@ char *ane_mil_linear(int in_ch, int out_ch, int seq, const char *weight_name) {
 
 int ane_compile_count(void) { return g_compiles; }
 
+bool ane_reload_weights(ANEKernel *k, const ANEWeight *weights, int n_weights, ANEQoS qos) {
+    @autoreleasepool {
+        if (!k || !k->model || !k->tmpDir) return false;
+        NSError *e = nil;
+        unsigned int q = (unsigned int)qos;
+        NSFileManager *fm = [NSFileManager defaultManager];
+
+        // Step 1: Unload model from ANE
+        if (g_sel_unload) {
+            BOOL ok = ((BOOL(*)(id,SEL,unsigned int,NSError**))objc_msgSend)(
+                k->model, g_sel_unload, q, &e);
+            if (!ok) {
+                fprintf(stderr, "libane: delta unload failed: %s\n",
+                        e ? [[e description] UTF8String] : "unknown");
+                return false;
+            }
+        }
+
+        // Step 2: Reconstruct tmpDir (ANE cleans it on unload)
+        [fm createDirectoryAtPath:[k->tmpDir stringByAppendingPathComponent:@"weights"]
+            withIntermediateDirectories:YES attributes:nil error:nil];
+
+        // Re-write MIL text
+        if (k->milData && k->milLen > 0) {
+            NSData *milNS = [NSData dataWithBytes:k->milData length:k->milLen];
+            [milNS writeToFile:[k->tmpDir stringByAppendingPathComponent:@"model.mil"]
+                    atomically:YES];
+        }
+
+        // Write updated weight files (source + compiled 'data' blob)
+        for (int i = 0; i < n_weights; i++) {
+            NSString *name = [NSString stringWithUTF8String:weights[i].name];
+            NSString *relPath = name;
+            if ([name hasPrefix:@"@model_path/"]) relPath = [name substringFromIndex:12];
+            NSString *fullPath = [k->tmpDir stringByAppendingPathComponent:relPath];
+
+            [fm createDirectoryAtPath:[fullPath stringByDeletingLastPathComponent]
+                withIntermediateDirectories:YES attributes:nil error:nil];
+            NSData *wdata = [NSData dataWithBytes:weights[i].data length:weights[i].len];
+            [wdata writeToFile:fullPath atomically:NO];
+
+            // Also patch the compiled 'data' blob (same format)
+            NSString *dataPath = [k->tmpDir stringByAppendingPathComponent:@"data"];
+            [wdata writeToFile:dataPath atomically:NO];
+        }
+
+        // Step 3: Reload onto ANE (program identity preserved)
+        e = nil;
+        BOOL loaded = ((BOOL(*)(id,SEL,unsigned int,id,NSError**))objc_msgSend)(
+            k->model, g_sel_load, q, @{}, &e);
+        if (!loaded) {
+            usleep(100000);
+            e = nil;
+            loaded = ((BOOL(*)(id,SEL,unsigned int,id,NSError**))objc_msgSend)(
+                k->model, g_sel_load, q, @{}, &e);
+        }
+        if (!loaded) {
+            fprintf(stderr, "libane: delta reload failed: %s\n",
+                    e ? [[e description] UTF8String] : "unknown");
+            return false;
+        }
+
+        return true;
+    }
+}
+
 void ane_free(ANEKernel *k) {
     @autoreleasepool {
         if (!k) return;
@@ -733,6 +818,7 @@ void ane_free(ANEKernel *k) {
             [[NSFileManager defaultManager] removeItemAtPath:k->tmpDir error:nil];
         free(k->ioIn); free(k->ioOut);
         free(k->inBytes); free(k->outBytes);
+        if (k->milData) free(k->milData);
         k->model = nil; k->request = nil; k->tmpDir = nil;
         free(k);
     }

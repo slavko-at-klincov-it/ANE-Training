@@ -82,14 +82,14 @@ int main(void) {
     for (int step = 0; step < STEPS; step++) {
 
         // --- Forward pass on ANE ---
-        // Compile kernel with current weights
         ANEWeight w = ane_weight_fp16("@model_path/weights/weight.bin", W, DIM, DIM);
         char *mil = ane_mil_linear(DIM, DIM, SEQ, "@model_path/weights/weight.bin");
         ANEKernel *k = ane_compile(mil, strlen(mil), &w, 1,
                                    1, &io_bytes, 1, &io_bytes,
                                    ANE_QOS_BACKGROUND);
         if (!k) {
-            printf("Compile failed at step %d (hit ~119 compile limit?)\n", step);
+            printf("Compile failed at step %d (budget: %d/%d)\n",
+                   step, ane_compile_count(), ANE_COMPILE_BUDGET);
             free(mil);
             ane_weight_free(&w);
             break;
@@ -98,13 +98,17 @@ int main(void) {
         struct timespec t0, t1;
         clock_gettime(CLOCK_MONOTONIC, &t0);
 
-        // Write input, run ANE, read output
         ane_write(k, 0, input, io_bytes);
         ane_eval(k, ANE_QOS_BACKGROUND);
         ane_read(k, 0, output, io_bytes);
 
         clock_gettime(CLOCK_MONOTONIC, &t1);
         double ms = (t1.tv_sec - t0.tv_sec) * 1000.0 + (t1.tv_nsec - t0.tv_nsec) / 1e6;
+
+        // FP16 overflow protection: sanitize ANE output
+        for (int i = 0; i < DIM * SEQ; i++) {
+            if (isnan(output[i]) || isinf(output[i])) output[i] = 0.0f;
+        }
 
         // --- Loss (MSE) ---
         float loss = 0;
@@ -114,14 +118,9 @@ int main(void) {
         }
         loss /= (DIM * SEQ);
 
-        // --- Backward pass on CPU ---
-        // d_loss/d_output = 2 * (output - target) / N
-        // d_loss/d_W = d_output @ input^T
-        //
-        // Layout: input is [DIM, SEQ] (channels-first)
-        // W is [DIM, DIM], output[i] = sum_j W[i][j] * input[j][s]
-        // dW[i][j] = sum_s d_output[i][s] * input[j][s]
+        if (isnan(loss)) { printf("NaN loss at step %d, stopping\n", step); break; }
 
+        // --- Backward pass on CPU ---
         memset(grad_W, 0, sizeof(grad_W));
         float scale = 2.0f / (DIM * SEQ);
         for (int i = 0; i < DIM; i++) {
@@ -135,6 +134,12 @@ int main(void) {
             }
         }
 
+        // Sanitize gradients
+        for (int i = 0; i < DIM * DIM; i++) {
+            if (isnan(grad_W[i])) grad_W[i] = 0.0f;
+            if (isinf(grad_W[i])) grad_W[i] = copysignf(65504.0f, grad_W[i]);
+        }
+
         // --- SGD weight update ---
         for (int i = 0; i < DIM * DIM; i++) {
             W[i] -= LR * grad_W[i];
@@ -146,7 +151,6 @@ int main(void) {
                    step, loss, W[0], W[DIM + 1], ms);
         }
 
-        // Cleanup this step's kernel
         ane_free(k);
         free(mil);
         ane_weight_free(&w);

@@ -179,8 +179,20 @@ char *ane_mil_header(void);
 
 // ===== Lifecycle =====
 
+// Compile budget: ANE silently fails after ~119 compilations per process.
+// Use ane_compile_count() to monitor, restart process before hitting limit.
+#define ANE_COMPILE_BUDGET 119
+#define ANE_COMPILE_SAFE_LIMIT 110
+
 // Get current compile count (for exec() restart budgeting).
 int ane_compile_count(void);
+
+// Reload weights without recompilation (delta compilation).
+// Unloads the model, patches weight files on disk, reloads.
+// The weights array must have same count and names as the original compile.
+// Returns true on success. On failure, caller should fall back to ane_compile().
+// Does NOT count toward the compile budget.
+bool ane_reload_weights(ANEKernel *k, const ANEWeight *weights, int n_weights, ANEQoS qos);
 
 // Free a compiled kernel and all resources.
 void ane_free(ANEKernel *k);
