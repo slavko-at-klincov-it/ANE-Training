@@ -414,6 +414,68 @@ Basierend auf Stories110M (124 Vocab, compacted), gemessen auf M3 Pro = 91ms/ste
 
 ---
 
+## Hardware-Constraints & Bottlenecks
+
+### Bekannte ANE-Limits
+
+| Constraint | Wert | Auswirkung |
+|:---|:---|:---|
+| **SRAM On-Chip** | ~32 MB (alle Generationen) | Tensoren >32MB spillen in DRAM → 30% Throughput-Drop |
+| **Compilation-Limit** | ~119 pro Prozess | Danach stille Fehler. Workaround: `exec()` Restart |
+| **IOSurface Minimum** | ~49 KB | Kleinere Tensoren müssen gepaddet werden |
+| **IOSurface Sortierung** | Alphabetisch nach MIL-Name | Falsche Reihenfolge = stille Fehler |
+| **`concat` Op** | Wird abgelehnt | Muss in separate Programme aufgeteilt werden |
+| **`gelu` Op** | Nicht unterstützt | tanh-Approximation nutzen |
+| **Conv 1x1 vs matmul** | Conv ist 3x schneller | Alle matmuls als 1x1 Conv ausdrücken |
+| **FP16 Overflow** | max ±65504 | Aktivierungen clampen vor Softmax/RMSNorm |
+| **Causal Masking** | Nicht nativ | `where()` MIL-Op als Workaround möglich |
+
+<sub>Quellen: Eigene Forschung + [Orion Paper](https://arxiv.org/abs/2603.06728) (20 dokumentierte Constraints)</sub>
+
+### Bottleneck-Analyse (M3 Pro, Stories110M)
+
+```
+Training Step = 91ms:
+
+  ANE Forward          ██████░░░░░░░░░░░░░░  22ms  (24%)
+  ANE Backward (dx)    ████████░░░░░░░░░░░░  15ms  (16%)
+  CPU dW Gradients     ██████████░░░░░░░░░░  20ms  (22%)  ← Größter CPU-Bottleneck
+  CPU Attention/RoPE   ██████░░░░░░░░░░░░░░   8ms   (9%)
+  CPU RMSNorm          ███░░░░░░░░░░░░░░░░░   5ms   (5%)
+  CPU Adam Update      ██░░░░░░░░░░░░░░░░░░   3ms   (3%)
+  Overhead             █████████░░░░░░░░░░░  18ms  (20%)
+
+  ANE: 41%  ·  CPU: 59%  ← CPU ist der Bottleneck, nicht der ANE
+```
+
+### Software-Optimierungspotenzial
+
+Rein durch Software-Änderungen (ohne neuen Chip) sind **~3x** möglich:
+
+| Optimierung | Gain | Aufwand |
+|:---|:---|:---|
+| **Delta Compilation** — Weights patchen statt recompile | 4200ms → 494ms | Mittel |
+| **Pipeline-Parallelismus** — CPU Backward ‖ ANE Forward | ~40% Latenz | Hoch |
+| **Attention auf ANE** — via `where()` MIL-Op | ~5ms CPU-Ersparnis | Hoch |
+| **RMSNorm auf ANE** — als MIL-Programm | ~5ms CPU-Ersparnis | Mittel |
+| **Zero-Copy Weight-Updates** — direkt in IOSurface | 50µs pro Update | Niedrig |
+| **LoRA Adapter-as-Input** — kein Recompile bei Fine-Tuning | Zero Recompile | Mittel |
+
+```
+Nach Optimierung (geschätzt):
+
+  ANE Forward+Attn     ████████████░░░░░░░░  25ms
+  ANE Backward         ████████░░░░░░░░░░░░  15ms  (parallel mit CPU)
+  CPU dW (parallel)    ░░░░░░░░░░░░░░░░░░░░   0ms  (hidden)
+  Delta Reload         ███░░░░░░░░░░░░░░░░░   5ms
+
+  Geschätzt: ~30ms/step (3x schneller als aktuell)
+```
+
+> Vollständiger Optimierungsplan mit Implementierungsdetails: **[ROADMAP.md](ROADMAP.md)**
+
+---
+
 ## Projektstruktur
 
 ```
@@ -515,9 +577,12 @@ sysctl sysctl.proc_translated 2>/dev/null
 | Projekt | Beschreibung |
 |:---|:---|
 | [maderix/ANE](https://github.com/maderix/ANE) | Erstes Training auf ANE — Inspiration für dieses Projekt |
-| [Orion Paper](https://arxiv.org/abs/2603.06728) | Akademisches Paper zu ANE-Programmierung |
-| [hollance/neural-engine](https://github.com/hollance/neural-engine) | Community-Dokumentation |
-| [eiln/ane](https://github.com/eiln/ane) | Linux-Kernel-Driver für ANE |
+| [Orion Paper](https://arxiv.org/abs/2603.06728) | Akademisches Paper: Delta Compilation, LoRA, 20 ANE Constraints |
+| [NeuralForge](https://github.com/Khaeldur/NeuralForge) | On-Device LLM Fine-Tuning, Process-Restart, GGUF-Export |
+| [ANEMLL](https://github.com/Anemll/Anemll) | ANE Machine Learning Library |
+| [hollance/neural-engine](https://github.com/hollance/neural-engine) | Community-Dokumentation (Supported Devices, Internals) |
+| [eiln/ane](https://github.com/eiln/ane) | Linux-Kernel-Driver — E5 Binary Format Analyse |
+| [SqueezeBits Yetter](https://blog.squeezebits.com/) | Disaggregated Inference: ANE Prefill + GPU Decode |
 
 ---
 
