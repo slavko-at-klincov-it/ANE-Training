@@ -294,23 +294,35 @@ cmd_menu() {
     show_banner
     ensure_all_built
 
-    # Quick hardware detect
-    local hw_line
-    hw_line=$("$EXAMPLES/demo_train" 2>/dev/null | grep "Hardware:" | head -1)
-    if [ -n "$hw_line" ]; then
-        echo -e "  ${G}+${NC} $hw_line"
-    fi
+    # Quick peak measurement + hardware detect (~2-3s)
+    local quick_data
+    quick_data=$("$EXAMPLES/bench" --quick 2>/dev/null)
+    if [ -n "$quick_data" ] && [ "$quick_data" != "ERROR" ]; then
+        local _tflops _tops _chip _arch _cores _api
+        _tflops=$(echo "$quick_data" | sed -n 's/.*TFLOPS:\([^|]*\).*/\1/p')
+        _tops=$(echo "$quick_data" | sed -n 's/.*TOPS:\([^|]*\).*/\1/p')
+        _chip=$(echo "$quick_data" | sed -n 's/.*CHIP:\([^|]*\).*/\1/p')
+        _arch=$(echo "$quick_data" | sed -n 's/.*ARCH:\([^|]*\).*/\1/p')
+        _cores=$(echo "$quick_data" | sed -n 's/.*CORES:\([^|]*\).*/\1/p')
+        _api=$(echo "$quick_data" | sed -n 's/.*API:\([^|]*\).*/\1/p')
 
-    local build_line
-    build_line=$("$EXAMPLES/demo_train" 2>/dev/null | grep "Build:" | head -1)
-    if [ -n "$build_line" ]; then
-        echo -e "  ${G}+${NC} $build_line"
-    fi
-
-    local api_line
-    api_line=$("$EXAMPLES/demo_train" 2>/dev/null | grep "API:" | head -1)
-    if [ -n "$api_line" ]; then
-        echo -e "  ${G}+${NC} $api_line"
+        ok "Hardware: ${W}${_arch}${NC} (${_chip}), ${_cores} cores"
+        if [ -n "$_tops" ] && [ "$_tops" != "0" ]; then
+            local _pct
+            _pct=$(awk "BEGIN { printf \"%.0f\", $_tflops / $_tops * 100 }")
+            ok "ANE Peak: ${W}${_tflops} TFLOPS${NC} (${_tops} TOPS Apple spec, ${_pct}%)"
+        else
+            ok "ANE Peak: ${W}${_tflops} TFLOPS${NC}"
+        fi
+        ok "API: ${_api}"
+    else
+        # Fallback to basic hardware detect
+        local hw_line
+        hw_line=$("$EXAMPLES/demo_train" 2>/dev/null | grep "Hardware:" | head -1)
+        if [ -n "$hw_line" ]; then echo -e "  ${G}+${NC} $hw_line"; fi
+        local api_line
+        api_line=$("$EXAMPLES/demo_train" 2>/dev/null | grep "API:" | head -1)
+        if [ -n "$api_line" ]; then echo -e "  ${G}+${NC} $api_line"; fi
     fi
 
     while true; do

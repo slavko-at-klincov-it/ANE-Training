@@ -10,16 +10,20 @@
 #include <time.h>
 #include "../libane/ane.h"
 
-// ===== Reference TFLOPS for known chips =====
-typedef struct { const char *arch; const char *name; double tflops; } ChipRef;
+// ===== Reference data for known chips =====
+// tflops: measured peak (fp16 matmul via libane bench)
+// apple_tops: Apple's marketing spec (INT8 TOPS, Neural Engine page)
+typedef struct { const char *arch; const char *name; double tflops; double apple_tops; } ChipRef;
 static const ChipRef CHIPS[] = {
-    {"h14g", "M2 Pro",  9.0},
-    {"h14p", "M2 Max",  9.2},
-    {"h15g", "M3 Pro",  9.4},
-    {"h15p", "M3 Max",  9.5},
-    {"h16g", "M4",     11.0},
-    {"h16p", "M4 Pro", 12.0},
-    {NULL, NULL, 0}
+    {"h13g", "M1",      5.5,  11.0},
+    {"h13p", "M1 Pro",  5.5,  11.0},
+    {"h14g", "M2 Pro",  9.0,  15.8},
+    {"h14p", "M2 Max",  9.2,  15.8},
+    {"h15g", "M3 Pro",  9.4,  18.0},
+    {"h15p", "M3 Max",  9.5,  18.0},
+    {"h16g", "M4",     11.0,  38.0},
+    {"h16p", "M4 Pro", 12.0,  38.0},
+    {NULL, NULL, 0, 0}
 };
 
 static const char *chip_name_for(const char *arch) {
@@ -37,42 +41,6 @@ static void bar(const char *label, double val, double max_val, int width) {
     for (int i = 0; i < fill; i++) printf("\xe2\x96\x88");
     for (int i = fill; i < width; i++) printf("\xe2\x96\x91");
     printf("\n");
-}
-
-// ===== Single benchmark run =====
-static double bench_single(int ch, int sp, const char *wname) {
-    float *dummy = (float *)calloc((size_t)ch * ch, sizeof(float));
-    for (int i = 0; i < ch * ch; i++) dummy[i] = 0.01f;
-
-    ANEWeight w = ane_weight_fp16(wname, dummy, ch, ch);
-    char *mil = ane_mil_linear(ch, ch, sp, wname);
-    size_t io_bytes = (size_t)ch * sp * 4;
-
-    ANEKernel *k = ane_compile(mil, strlen(mil), &w, 1,
-                                1, &io_bytes, 1, &io_bytes,
-                                ANE_QOS_BACKGROUND);
-    free(dummy);
-    if (!k) { free(mil); ane_weight_free(&w); return -1; }
-
-    float *inp = (float *)calloc(ch * sp, sizeof(float));
-    for (int i = 0; i < ch * sp; i++) inp[i] = 0.5f;
-    ane_write(k, 0, inp, io_bytes);
-    free(inp);
-
-    for (int i = 0; i < 5; i++) ane_eval(k, ANE_QOS_BACKGROUND);
-
-    int iters = 30;
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-    for (int i = 0; i < iters; i++) ane_eval(k, ANE_QOS_BACKGROUND);
-    clock_gettime(CLOCK_MONOTONIC, &t1);
-
-    double ms = ((t1.tv_sec - t0.tv_sec) * 1e3 + (t1.tv_nsec - t0.tv_nsec) / 1e6) / iters;
-
-    ane_free(k);
-    free(mil);
-    ane_weight_free(&w);
-    return ms;
 }
 
 // ===== Stacked benchmark run =====
@@ -140,7 +108,73 @@ static double bench_qos(int ch, int sp, ANEQoS qos, const char *wname) {
     return ms;
 }
 
-int main(void) {
+// ===== Quick peak measurement (~2-3s) =====
+// Compiles 2 kernels, runs 200 evals each, prints one summary line.
+// Output format: "TFLOPS:3.64|TOPS:18|CHIP:M3 Pro|ARCH:h15g|CORES:16|API:v1(35)"
+// Designed for machine parsing by the CLI.
+static int quick_peak(void) {
+    if (ane_init() != 0) { printf("ERROR\n"); return 1; }
+    ANEDeviceInfo info = ane_device_info();
+    if (!info.has_ane) { printf("ERROR\n"); return 1; }
+
+    const char *name = chip_name_for(info.arch);
+    double apple_tops = 0;
+    for (int i = 0; CHIPS[i].arch; i++)
+        if (info.arch && strcmp(info.arch, CHIPS[i].arch) == 0) apple_tops = CHIPS[i].apple_tops;
+
+    const char *wname = "@model_path/weights/weight.bin";
+    double peak = 0;
+
+    // Test 2 kernel shapes known to find the peak
+    struct { int ci; int co; int sp; } tests[] = {
+        {768, 2048, 256},
+        {2048, 2048, 128},
+    };
+    for (int t = 0; t < 2; t++) {
+        int ci = tests[t].ci, co = tests[t].co, sp = tests[t].sp;
+        double gflop = 2.0 * ci * co * sp / 1e9;
+        float *dummy = (float *)calloc((size_t)ci * co, sizeof(float));
+        for (int j = 0; j < ci * co; j++) dummy[j] = 0.01f;
+        ANEWeight w = ane_weight_fp16(wname, dummy, co, ci);
+        char *mil = ane_mil_linear(ci, co, sp, wname);
+        size_t in_bytes = (size_t)ci * sp * 4;
+        size_t out_bytes = (size_t)co * sp * 4;
+        ANEKernel *k = ane_compile(mil, strlen(mil), &w, 1,
+                                    1, &in_bytes, 1, &out_bytes,
+                                    ANE_QOS_BACKGROUND);
+        free(dummy);
+        if (k) {
+            float *inp = (float *)calloc(ci * sp, sizeof(float));
+            for (int j = 0; j < ci * sp; j++) inp[j] = 0.5f;
+            ane_write(k, 0, inp, in_bytes);
+            free(inp);
+            for (int j = 0; j < 5; j++) ane_eval(k, ANE_QOS_BACKGROUND);
+            struct timespec t0, t1;
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            for (int j = 0; j < 200; j++) ane_eval(k, ANE_QOS_BACKGROUND);
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            double ms = ((t1.tv_sec - t0.tv_sec) * 1e3 + (t1.tv_nsec - t0.tv_nsec) / 1e6) / 200;
+            double tflops = gflop / ms;
+            if (tflops > peak) peak = tflops;
+            ane_free(k);
+        }
+        free(mil); ane_weight_free(&w);
+    }
+
+    printf("TFLOPS:%.2f|TOPS:%.0f|CHIP:%s|ARCH:%s|CORES:%d|API:v%d(%d)\n",
+        peak, apple_tops,
+        name ? name : "unknown",
+        info.arch ? info.arch : "?",
+        info.num_cores,
+        ane_api_info().api_version, ane_api_info().classes_found);
+    return 0;
+}
+
+int main(int argc, char *argv[]) {
+    // --quick: fast peak measurement for CLI integration
+    if (argc > 1 && strcmp(argv[1], "--quick") == 0)
+        return quick_peak();
+
     printf("\n");
     printf("  \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88 ANE BENCHMARK \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\n");
     printf("\n");
@@ -161,38 +195,87 @@ int main(void) {
     printf("  Build:  %s\n", info.build ? info.build : "?");
     printf("  API:    v%d (%d classes)\n", ane_api_info().api_version, ane_api_info().classes_found);
 
-    // ===== Phase 1: Single-Conv Sweep =====
-    printf("\n  ---- Single Conv Sweep (1x1 conv, ch x ch) ----\n\n");
-    printf("  %-14s %7s %7s %9s %7s\n", "Config", "Weights", "GFLOP", "Latency", "TFLOPS");
-    printf("  %-14s %7s %7s %9s %7s\n", "--------------", "-------", "-------", "---------", "-------");
+    // Apple marketing spec for this chip
+    double apple_tops = 0;
+    for (int i = 0; CHIPS[i].arch; i++)
+        if (info.arch && strcmp(info.arch, CHIPS[i].arch) == 0) apple_tops = CHIPS[i].apple_tops;
+    if (apple_tops > 0)
+        printf("  Apple:  %.0f TOPS (marketing, INT8)\n", apple_tops);
 
     const char *wname = "@model_path/weights/weight.bin";
-    struct { int ch; int sp; } singles[] = {
-        {256, 64}, {512, 64}, {1024, 64}, {2048, 64}, {3072, 64}, {4096, 64}
-    };
-    double peak_single = 0;
-    double results_single[6];
 
-    for (int i = 0; i < 6; i++) {
-        int ch = singles[i].ch, sp = singles[i].sp;
-        double gflop = 2.0 * ch * ch * sp / 1e9;
-        double wt_mb = (double)ch * ch * 2 / (1024 * 1024);
-        double ms = bench_single(ch, sp, wname);
+    // ===== Phase 1: Single-Conv Sweep =====
+    printf("\n  ---- Single Conv Sweep ----\n\n");
+    printf("  %-22s %7s %7s %9s %7s\n", "Config", "Weights", "GFLOP", "Latency", "TFLOPS");
+    printf("  %-22s %7s %7s %9s %7s\n", "----------------------", "-------", "-------", "---------", "-------");
+
+    struct { int ch_in; int ch_out; int sp; } singles[] = {
+        // Square, small spatial (original)
+        { 256,  256,  64},
+        { 512,  512,  64},
+        {1024, 1024,  64},
+        {2048, 2048,  64},
+        // Larger spatial (where peak lives)
+        { 768,  768, 256},
+        {2048,  768, 256},
+        { 768, 2048, 256},
+        {1024, 1024, 256},
+        {2048, 2048, 128},
+    };
+    int n_singles = sizeof(singles) / sizeof(singles[0]);
+    double peak_single = 0;
+    double results_single[9];
+    int best_single_idx = 0;
+
+    for (int i = 0; i < n_singles; i++) {
+        int ci = singles[i].ch_in, co = singles[i].ch_out, sp = singles[i].sp;
+        double gflop = 2.0 * ci * co * sp / 1e9;
+        double wt_mb = (double)ci * co * 2 / (1024 * 1024);
+
+        // Use bench_rect for rectangular matmuls
+        float *dummy = (float *)calloc((size_t)ci * co, sizeof(float));
+        for (int j = 0; j < ci * co; j++) dummy[j] = 0.01f;
+        ANEWeight w = ane_weight_fp16(wname, dummy, co, ci);
+        char *mil = ane_mil_linear(ci, co, sp, wname);
+        size_t in_bytes = (size_t)ci * sp * 4;
+        size_t out_bytes = (size_t)co * sp * 4;
+        ANEKernel *k = ane_compile(mil, strlen(mil), &w, 1,
+                                    1, &in_bytes, 1, &out_bytes,
+                                    ANE_QOS_BACKGROUND);
+        free(dummy);
+        double ms = -1;
+        if (k) {
+            float *inp = (float *)calloc(ci * sp, sizeof(float));
+            for (int j = 0; j < ci * sp; j++) inp[j] = 0.5f;
+            ane_write(k, 0, inp, in_bytes);
+            free(inp);
+            for (int j = 0; j < 5; j++) ane_eval(k, ANE_QOS_BACKGROUND);
+            int iters = (ci >= 1024 && sp >= 128) ? 100 : 200;
+            struct timespec t0, t1;
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            for (int j = 0; j < iters; j++) ane_eval(k, ANE_QOS_BACKGROUND);
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            ms = ((t1.tv_sec - t0.tv_sec) * 1e3 + (t1.tv_nsec - t0.tv_nsec) / 1e6) / iters;
+            ane_free(k);
+        }
+        free(mil); ane_weight_free(&w);
+
         double tflops = (ms > 0) ? gflop / ms : 0;
         results_single[i] = tflops;
-        if (tflops > peak_single) peak_single = tflops;
+        if (tflops > peak_single) { peak_single = tflops; best_single_idx = i; }
 
         char label[32];
-        snprintf(label, sizeof(label), "%dx%d sp%d", ch, ch, sp);
+        if (ci == co) snprintf(label, sizeof(label), "%dx%d sp%d", ci, co, sp);
+        else          snprintf(label, sizeof(label), "%dx%d sp%d", ci, co, sp);
         if (ms > 0)
-            printf("  %-14s %5.1f MB %6.2f  %6.3f ms  %6.2f\n", label, wt_mb, gflop, ms, tflops);
+            printf("  %-22s %5.1f MB %6.2f  %6.3f ms  %6.2f\n", label, wt_mb, gflop, ms, tflops);
         else
-            printf("  %-14s %5.1f MB %6.2f  FAILED\n", label, wt_mb, gflop);
+            printf("  %-22s %5.1f MB %6.2f  FAILED\n", label, wt_mb, gflop);
         fflush(stdout);
     }
 
     // ===== Phase 2: Stacked (Peak Sustained) =====
-    printf("\n  ---- Peak Sustained (Stacked Conv) ----\n\n");
+    printf("\n  ---- Stacked Conv (amortize dispatch) ----\n\n");
     printf("  %-24s %7s %7s %9s %7s\n", "Config", "Weights", "GFLOP", "Latency", "TFLOPS");
     printf("  %-24s %7s %7s %9s %7s\n", "------------------------", "-------", "-------", "---------", "-------");
 
@@ -220,7 +303,70 @@ int main(void) {
         fflush(stdout);
     }
 
-    // ===== Phase 3: QoS Sweep =====
+    // ===== Phase 3: 5-Second Sustained Peak =====
+    printf("\n  ---- Sustained Peak (5 seconds) ----\n\n");
+    {
+        // Use the best single kernel shape for sustained test
+        int ci = singles[best_single_idx].ch_in;
+        int co = singles[best_single_idx].ch_out;
+        int sp = singles[best_single_idx].sp;
+        double gflop = 2.0 * ci * co * sp / 1e9;
+
+        float *dummy = (float *)calloc((size_t)ci * co, sizeof(float));
+        for (int j = 0; j < ci * co; j++) dummy[j] = 0.01f;
+        ANEWeight w = ane_weight_fp16(wname, dummy, co, ci);
+        char *mil = ane_mil_linear(ci, co, sp, wname);
+        size_t in_bytes = (size_t)ci * sp * 4;
+        size_t out_bytes = (size_t)co * sp * 4;
+        ANEKernel *k = ane_compile(mil, strlen(mil), &w, 1,
+                                    1, &in_bytes, 1, &out_bytes,
+                                    ANE_QOS_BACKGROUND);
+        free(dummy);
+
+        double sustained_tflops = 0;
+        if (k) {
+            float *inp = (float *)calloc(ci * sp, sizeof(float));
+            for (int j = 0; j < ci * sp; j++) inp[j] = 0.5f;
+            ane_write(k, 0, inp, in_bytes);
+            free(inp);
+
+            // Warmup
+            for (int j = 0; j < 10; j++) ane_eval(k, ANE_QOS_BACKGROUND);
+
+            // 5 seconds sustained
+            int count = 0;
+            struct timespec t0, t1;
+            clock_gettime(CLOCK_MONOTONIC, &t0);
+            for (;;) {
+                ane_eval(k, ANE_QOS_BACKGROUND);
+                count++;
+                if (count % 100 == 0) {
+                    clock_gettime(CLOCK_MONOTONIC, &t1);
+                    double elapsed = (t1.tv_sec - t0.tv_sec) * 1e3 + (t1.tv_nsec - t0.tv_nsec) / 1e6;
+                    if (elapsed >= 5000.0) break;
+                }
+            }
+            clock_gettime(CLOCK_MONOTONIC, &t1);
+            double ms = (t1.tv_sec - t0.tv_sec) * 1e3 + (t1.tv_nsec - t0.tv_nsec) / 1e6;
+            double ms_per = ms / count;
+            sustained_tflops = gflop / ms_per;
+
+            char label[32];
+            snprintf(label, sizeof(label), "%dx%d sp%d", ci, co, sp);
+            printf("  Kernel:    %s (best from sweep)\n", label);
+            printf("  Evals:     %d in %.1fs\n", count, ms / 1000);
+            printf("  Latency:   %.3f ms/eval\n", ms_per);
+            printf("  Sustained: %.2f TFLOPS (fp16)\n", sustained_tflops);
+            ane_free(k);
+        } else {
+            printf("  FAILED to compile sustained test kernel\n");
+        }
+        free(mil); ane_weight_free(&w);
+
+        if (sustained_tflops > peak_single) peak_single = sustained_tflops;
+    }
+
+    // ===== Phase 4: QoS Sweep =====
     printf("\n  ---- QoS Levels (512x512 sp64) ----\n\n");
     printf("  %-20s %6s %9s %7s\n", "QoS Level", "Value", "Latency", "TFLOPS");
     printf("  %-20s %6s %9s %7s\n", "--------------------", "------", "---------", "-------");
@@ -246,14 +392,16 @@ int main(void) {
             printf("  %-20s %6d  FAILED\n", qos_levels[i].name, (int)qos_levels[i].qos);
     }
 
-    // ===== Phase 4: ASCII Barchart =====
+    // ===== Phase 5: ASCII Barchart =====
     double overall_peak = peak_single > peak_stacked ? peak_single : peak_stacked;
 
     printf("\n  ---- Performance Overview ----\n\n");
 
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < n_singles; i++) {
         char label[32];
-        snprintf(label, sizeof(label), "%dx%d", singles[i].ch, singles[i].ch);
+        int ci = singles[i].ch_in, co = singles[i].ch_out, sp = singles[i].sp;
+        if (ci == co) snprintf(label, sizeof(label), "%dx%d sp%d", ci, co, sp);
+        else          snprintf(label, sizeof(label), "%dx%d sp%d", ci, co, sp);
         bar(label, results_single[i], overall_peak * 1.2, 30);
     }
 
@@ -264,8 +412,8 @@ int main(void) {
         bar(label, results_stacked[i], overall_peak * 1.2, 30);
     }
 
-    // ===== Phase 5: Reference Comparison =====
-    printf("\n  ---- Chip Comparison ----\n\n");
+    // ===== Phase 6: Reference Comparison =====
+    printf("\n  ---- Chip Comparison (measured fp16 TFLOPS) ----\n\n");
     double max_ref = overall_peak;
     for (int i = 0; CHIPS[i].arch; i++)
         if (CHIPS[i].tflops > max_ref) max_ref = CHIPS[i].tflops;
@@ -284,10 +432,19 @@ int main(void) {
 
     // ===== Summary =====
     printf("\n  ---- Summary ----\n\n");
-    printf("  Peak (single conv):  %.2f TFLOPS\n", peak_single);
-    printf("  Peak (stacked):      %.2f TFLOPS\n", peak_stacked);
+    printf("  Measured peak:       %.2f TFLOPS (fp16 matmul)\n", overall_peak);
+    if (apple_tops > 0) {
+        printf("  Apple marketing:     %.0f TOPS (INT8, theoretical)\n", apple_tops);
+        printf("  Efficiency:          %.1f%% of Apple spec\n", 100.0 * overall_peak / apple_tops);
+        printf("\n");
+        printf("  Note: Apple's TOPS are INT8 peak throughput. Real fp16 matmul\n");
+        printf("  throughput is lower due to dispatch overhead, memory bandwidth,\n");
+        printf("  and the fp16 data path being narrower than INT8.\n");
+    }
+    printf("\n");
     printf("  Best QoS:            Background (9)\n");
-    printf("  Compiles used:       %d / 119\n", ane_compile_count());
+    printf("  Dispatch overhead:   ~0.25 ms/kernel (minimum latency floor)\n");
+    printf("  Compiles used:       %d / %d\n", ane_compile_count(), ANE_COMPILE_BUDGET);
     printf("\n");
 
     return 0;
