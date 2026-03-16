@@ -242,6 +242,33 @@ Ausführliche API-Dokumentation: [libane/README.md](libane/README.md)
 
 > **TFLOPS vs TOPS:** TFLOPS = Tera Floating-Point Operations Per Second (zählt multiply+add als 2 Ops). TOPS = Tera Operations Per Second (zählt jede Operation einzeln). Deswegen kann TOPS höher sein als TFLOPS bei gleicher Hardware.
 
+### Performance auf anderen Chips
+
+Dieses Projekt wurde auf einem M3 Pro entwickelt und getestet. Auf neueren Chips ist deutlich mehr drin:
+
+| Chip | ANE TOPS (Apple) | Mem Bandwidth | Geschätzte TFLOPS* | INT8 Speedup | Vorteil gegenüber M3 Pro |
+|------|-------------------|---------------|---------------------|--------------|--------------------------|
+| **M3 Pro** | 18 TOPS | 150 GB/s | **9.4 TFLOPS** (gemessen) | 1.0-1.14x | Baseline |
+| **M4** | 38 TOPS | 120 GB/s | ~11 TFLOPS | 1.88x | **2x ANE**, INT8 endlich nutzbar |
+| **M4 Pro** | 38 TOPS | 273 GB/s | ~11 TFLOPS | 1.88x | **2x ANE**, 1.8x Bandwidth |
+| **M4 Max** | 38 TOPS | 546 GB/s | ~11 TFLOPS | 1.88x | **2x ANE**, 3.6x Bandwidth |
+| **M5** | nicht veröffentlicht | 153 GB/s | ~12-14 TFLOPS† | TBD | ~2x+ ANE, GPU Neural Accelerators |
+| **M5 Pro** | nicht veröffentlicht | 307 GB/s | ~12-14 TFLOPS† | TBD | ~2x+ ANE, **2x Bandwidth**, 20 GPU NAs |
+| **M5 Max** | nicht veröffentlicht | 614 GB/s | ~12-14 TFLOPS† | TBD | ~2x+ ANE, **4x Bandwidth**, 40 GPU NAs |
+
+\* TFLOPS-Schätzung für den Neural Engine allein (FP16, basierend auf unserem Benchmark-Verfahren). M4-Wert aus dem maderix/ANE Dashboard.
+† M5-ANE-Schätzung basiert auf dem Trend M3→M4 und Apples Angabe "faster Neural Engine with higher bandwidth".
+
+**Was bedeutet das konkret?**
+
+- **M4 / M4 Pro**: Der Neural Engine hat doppelt so viele TOPS (38 vs 18). Training-Steps die auf M3 Pro 91ms dauern, sollten auf M4 bei **~45-55ms** landen. INT8-Quantisierung bringt nochmal 1.88x — damit wäre INT8-Training auf M4 realistisch (~25-30ms/step).
+- **M4 Max**: Gleicher ANE wie M4 Pro, aber 546 GB/s Memory-Bandwidth. Bei großen Modellen (>16MB Weights) wird der Durchsatz nicht mehr durch Memory-Transfers limitiert.
+- **M5 (Oktober 2025)**: Apple hat keine separaten ANE-TOPS veröffentlicht, aber der ANE ist laut Apple "schneller mit höherer Bandwidth". Die große Neuerung ist die **Fusion Architecture**: Jeder GPU-Core hat einen eigenen **Neural Accelerator**. Die Gesamt-AI-Leistung liegt laut Berichten bei ~133 TOPS (Neural Engine + alle GPU Neural Accelerators kombiniert).
+- **M5 Pro (März 2026)**: 18-Core CPU, 20-Core GPU (mit je einem Neural Accelerator), 307 GB/s — doppelte Memory-Bandwidth gegenüber M3 Pro. Apple spricht von **4x schnellerem LLM Prompt Processing** gegenüber M4 Pro.
+- **M5 Max (März 2026)**: 40-Core GPU (40 Neural Accelerators), 614 GB/s — **4x die Memory-Bandwidth** von M3 Pro. Für große Modelle ein Game-Changer.
+
+> **Wichtiger Hinweis:** Die GPU Neural Accelerators im M5 sind über Metal/MLX erreichbar, **nicht** über die privaten ANE-APIs die `libane` nutzt. Für `libane`-User ist der M5-Vorteil primär der schnellere Neural Engine und die höhere Memory-Bandwidth. Um die vollen ~133 TOPS des M5 zu nutzen, müsste man auf Apples MLX-Framework umsteigen — das ist aber offiziell und stabil.
+
 ---
 
 ## Projektstruktur
