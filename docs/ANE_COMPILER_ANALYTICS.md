@@ -110,37 +110,118 @@ The buffer is generated inside `aned` daemon during `compileModel:sandboxExtensi
 on `_ANEDaemonConnection`. The daemon's XPC reply does **not** pass the analytics buffer back to
 the client in the normal compilation flow.
 
-## How to Get the Analytics Buffer
+## XPC Reply Interception Results (CONFIRMED)
 
-### Option 1: XPC Reply Interception
-Swizzle `_ANEDaemonConnection`'s compile reply handler to capture the raw analytics buffer
-before it's discarded. Requires method swizzling at runtime.
+### Discovered XPC Protocol
+
+`_ANEDaemonProtocol` (required instance methods):
+```
+compileModel:sandboxExtension:options:qos:withReply:
+compiledModelExistsFor:withReply:
+loadModel:sandboxExtension:options:qos:withReply:
+loadModelNewInstance:options:modelInstParams:qos:withReply:
+prepareChainingWithModel:options:chainingReq:qos:withReply:
+purgeCompiledModel:withReply:
+unloadModel:options:qos:withReply:
+reportTelemetryToPPS:playload:
+```
+
+### Compile Reply Block Signature
+
+From block descriptor introspection:
+```
+v36@?0B8@"NSDictionary"12@"NSString"20@"NSError"28
+```
+Decoded: `^(BOOL success, NSDictionary *result, NSString *info, NSError *error)`
+
+**Compile result dictionary (4 keys):**
+| Key | Type | Value |
+|:---|:---|:---|
+| `ErrorList` | NSArray | Empty on success |
+| `ModelMaxDramUsage` | NSNumber | 278980 (for 256x256 conv) |
+| `CompiledInputSourceFileName` | NSString | Path to model.mil |
+| `NetworkStatusList` | NSArray | Per-procedure I/O descriptors (see below) |
+
+**No analytics buffer is present.** The compiler analytics buffer never leaves the daemon process.
+
+### Load Reply Block Signature
+
+```
+v56@?0B8@"NSDictionary"12Q20Q28c36@"NSString"40@"NSError"48
+```
+Decoded: `^(BOOL success, NSDictionary *result, uint64_t programHandle, uint64_t intermediateHandle, char queueDepth, NSString *info, NSError *error)`
+
+**Load result dictionary (2 keys):**
+| Key | Type | Value |
+|:---|:---|:---|
+| `NetworkStatusList` | NSArray | Per-procedure I/O descriptors |
+| `ANEFModelDescription` | NSDictionary | Input/output symbols, alignment, procedure names |
+
+**Load reply extra fields:**
+| Field | Type | Example | Meaning |
+|:---|:---|:---|:---|
+| `programHandle` | uint64 | `0x4d697c3e1f2` | ANE program slot identifier |
+| `intermediateHandle` | uint64 | `0` | **SRAM spill buffer handle** (0 = no spill) |
+| `queueDepth` | char | `127` | Max queue depth for this program |
+
+### NetworkStatusList Per-Procedure Entry
+
+Each procedure (e.g., "main") contains:
+```
+Name: "main"
+LiveInputList:  [{Symbol, Name, Type, Channels, Width, Height, Depth,
+                   Batches, Interleave, PlaneCount,
+                   BatchStride, PlaneStride, RowStride, DepthStride}]
+LiveOutputList: [same fields]
+```
+
+### Key Insight: intermediateBufferHandle IS the Spill Signal
+
+The load reply's `intermediateHandle` serves the same purpose as the analytics
+`ViolatesMaxLatency` flag. When non-zero, it indicates the compiler allocated an
+intermediate DRAM buffer because layer activations exceeded SRAM capacity.
+
+`intermediateHandle = 0` for all single-conv models (256-2048 channels), confirming
+they fit in SRAM. Multi-layer models may produce non-zero handles.
+
+### _ANEClient Internal Structure
+
+```
+_ANEClient
+  ._conn: _ANEDaemonConnection (main XPC connection)
+  ._fastConn: _ANEDaemonConnection (fast/priority connection)
+  ._virtualClient: _ANEVirtualClient (direct IOUserClient path)
+  ._connections: NSMutableDictionary (model -> connection map)
+  ._connectionsUsedForLoadingModels: NSMutableDictionary
+  ._priorityQ: NSArray
+  ._lock: os_unfair_lock
+```
+
+`_ANEDaemonConnection` wraps `NSXPCConnection` to `com.apple.appleneuralengine` (aned, pid varies).
+
+## Remaining Options for Analytics Buffer
+
+### Option 1: Intercept Inside aned Daemon (DYLD_INSERT)
+The analytics buffer is generated inside the daemon process. Use `DYLD_INSERT_LIBRARIES`
+to inject into `/usr/libexec/aned` and intercept from the daemon side.
+**Blocked by SIP** on standard macOS installs.
 
 ### Option 2: CoreML Profiling Environment
 `EspressoProfilingANEcompilerAnalytics` has a `compiler_analytics_file_names` property (NSArray),
 suggesting analytics are written to disk files when profiling is enabled.
 Try: `COREML_PROFILING=1 ./ane bench` or similar environment variables.
 
-### Option 3: Construct Buffer Manually
-If we can determine the binary format of the analytics buffer (header + array of structs),
-we could potentially request it via compile options. The `kANEFPerformanceStatsMask` option
-might trigger analytics buffer generation on the client side.
+### Option 3: _ANEVirtualClient Direct Path
+`_ANEVirtualClient.compileModel:options:qos:error:` bypasses the daemon entirely and
+calls the ANE IOUserClient directly. The `updatePerformanceStats:` method on
+`_ANEVirtualClient` takes a `VMData*` struct and returns an NSObject (likely NSDictionary
+or NSData with perf stats). This path may include analytics data that the daemon path filters out.
 
-## What We CAN See Without the Buffer
-
-From `modelAttributes.NetworkStatusList` after compile+load:
-
-```
-Per tensor: BatchStride, PlaneStride, RowStride,
-            Channels, Width, Height, Depth,
-            Interleave, Symbol, Type
-```
-
-`intermediateBufferHandle = 0` for all tested kernel sizes (256-2048), indicating no
-intermediate SRAM spill for single-conv models. Multi-layer models would likely show
-non-zero handles when spilling occurs.
+### Option 4: Construct Buffer Manually
+Since we know the struct layouts (`_AnalyticsLayerInfo` = 132 bytes, etc.), we could
+construct a synthetic analytics buffer if we can obtain the raw values through other means.
 
 ---
 
 *Last updated: 2026-03-18 | M3 Pro (h15g), macOS 26.3.1 (25D2128)*
-*Source: `repo/training/test_compiler_analytics.m`*
+*Source: `repo/training/test_compiler_analytics.m`, `repo/training/test_analytics_xpc.m`*

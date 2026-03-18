@@ -136,6 +136,8 @@ struct ANEKernel {
     // Delta compilation support
     void *milData;          // Copy of MIL text for reload
     size_t milLen;
+    // SRAM spill detection
+    bool sram_spill;        // true if intermediateBufferHandle > 0
 };
 
 // ===== IOSurface creation =====
@@ -483,18 +485,26 @@ ANEKernel *ane_compile(const char *mil, size_t mil_len,
                     g_compiles, ANE_COMPILE_BUDGET);
         }
 
-        // SRAM budget check
+        // SRAM spill detection: check if compiler allocated an intermediate DRAM buffer
+        uint64_t ibh = ((uint64_t(*)(id,SEL))objc_msgSend)(mdl, sel_registerName("intermediateBufferHandle"));
+        bool sram_spill = (ibh != 0);
+        if (sram_spill)
+            fprintf(stderr, "libane: WARNING: SRAM spill detected (intermediateBufferHandle=%llu) — "
+                    "model exceeds ~32MB SRAM, expect ~30%% throughput drop\n", ibh);
+
+        // I/O size budget check (heuristic, separate from compiler's spill detection)
         size_t total_io = 0;
         for (int i = 0; i < n_inputs; i++) total_io += input_sizes[i];
         for (int i = 0; i < n_outputs; i++) total_io += output_sizes[i];
         if (total_io > 32 * 1024 * 1024)
-            fprintf(stderr, "libane: WARNING: total I/O %zuMB exceeds ANE SRAM (~32MB), "
-                    "expect ~30%% throughput drop\n", total_io >> 20);
+            fprintf(stderr, "libane: WARNING: total I/O %zuMB exceeds ANE SRAM (~32MB)\n",
+                    total_io >> 20);
 
         // Build kernel handle
         ANEKernel *k = (ANEKernel *)calloc(1, sizeof(ANEKernel));
         k->model = mdl;
         k->tmpDir = td;
+        k->sram_spill = sram_spill;
         k->milData = malloc(mil_len);
         memcpy(k->milData, mil, mil_len);
         k->milLen = mil_len;
@@ -540,7 +550,9 @@ bool ane_eval(ANEKernel *k, ANEQoS qos) {
         NSError *e = nil;
         return ((BOOL(*)(id,SEL,unsigned int,id,id,NSError**))objc_msgSend)(
             k->model, g_sel_evaluate,
-            (unsigned int)qos, @{}, k->request, &e);
+            (unsigned int)qos,
+            @{@"kANEFDisableIOFencesUseSharedEventsKey": @YES},
+            k->request, &e);
     }
 }
 
@@ -838,6 +850,10 @@ void ane_write_dynamic_weights(ANEKernel *k, int idx, const float *W,
 // ===== Lifecycle =====
 
 int ane_compile_count(void) { return g_compiles; }
+
+bool ane_sram_spill(const ANEKernel *k) {
+    return k ? k->sram_spill : false;
+}
 
 bool ane_reload_weights(ANEKernel *k, const ANEWeight *weights, int n_weights, ANEQoS qos) {
     @autoreleasepool {

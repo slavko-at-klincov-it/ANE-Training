@@ -27,7 +27,7 @@
 > [!IMPORTANT]
 > **Das IST:**
 > - Direkter Zugriff auf Apples **private ANE-API** (76 Klassen entdeckt, 35 via libane exponiert)
-> - **FP16 native Compute** auf der Neural Engine Hardware — 9.9 TFLOPS auf M3 Pro
+> - **FP16 native Compute** auf der Neural Engine Hardware — 12.8 TFLOPS auf M3 Pro
 > - **1 Compile → unbegrenzte Training-Steps** via Dynamic Spatial Packing
 >
 > **Das ist NICHT:**
@@ -192,16 +192,16 @@ Sustained: 5.01 TFLOPS (fp16)
 Thermal:   Nominal (cool)
 
 ---- Summary ----
-Measured peak:       9.89 TFLOPS (fp16 matmul)
+Measured peak:       12.79 TFLOPS (fp16 matmul)
 Apple marketing:     18 TOPS (INT8, theoretical)
-Efficiency:          54.9% of Apple spec
+Efficiency:          71.1% of Apple spec
 Thermal:             Nominal (cool)
 ```
 
 Beim Start misst `./ane` automatisch den Peak (~1s):
 ```
   + Hardware: h15g (M3 Pro), 16 cores
-  + ANE Peak: 9.90 TFLOPS (18 TOPS Apple spec, 55%)
+  + ANE Peak: 12.79 TFLOPS (18 TOPS Apple spec, 71%)
   + API: v1(35)
 ```
 
@@ -455,11 +455,11 @@ Ausführliche API-Dokumentation: **[libane/README.md](libane/README.md)**
 
 | Metric | Wert | |
 |:---|---:|:---|
-| Gemessener Peak FP16 | **9.90 TFLOPS** | 128x stacked conv (amortisierter Dispatch) |
-| Bester Einzel-Kernel | **4.73 TFLOPS** | 768×2048 sp256 |
+| Gemessener Peak FP16 | **12.79 TFLOPS** | 512ch sp128 depth128 stacked |
+| Bester Einzel-Kernel | **11.64 TFLOPS** | 512×4096 sp4096 |
 | Sustained Peak (5s) | **5.01 TFLOPS** | Durchgehende Evaluation, ohne Unterbrechung |
 | Apple Marketing Spec | **18 TOPS** | INT8, theoretisch |
-| Effizienz vs Spec | **55%** | Reale fp16 Matmul vs Apple INT8 TOPS |
+| Effizienz vs Spec | **71%** | Reale fp16 Matmul vs Apple INT8 TOPS |
 | Training Stories110M | **91–183 ms/step** | Je nach Vocab-Größe |
 | Dispatch-Overhead | **~0.17 ms** | Mindest-Latenz pro Kernel-Aufruf |
 | QoS Background vs Default | **42% schneller** | Weniger Scheduling-Overhead |
@@ -499,7 +499,7 @@ Deswegen kann TOPS höher sein als TFLOPS bei gleicher Hardware. Apple veröffen
 | M2 Ultra | H14 x2 | **31.6** | 800 GB/s | ~18 | nur Weights | ~64 MB |
 | | | | | | | |
 | **M3** | H15 | 18 | 100 GB/s | ~9.4 | nur Weights | ~32 MB |
-| **M3 Pro** | H15 (h15g) | 18 | 150 GB/s | **9.4** | 1.0–1.14x | ~32 MB |
+| **M3 Pro** | H15 (h15g) | 18 | 150 GB/s | **12.79** | 1.0–1.14x | ~32 MB |
 | M3 Max | H15 (h15p) | 18 | 300–400 GB/s | ~9.5 | nur Weights | ~32 MB |
 | M3 Ultra | H15 x2 | **36** | 819 GB/s | ~19 | nur Weights | ~64 MB |
 | | | | | | | |

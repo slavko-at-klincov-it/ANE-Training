@@ -205,6 +205,12 @@ ANEThermalState ane_thermal_state(void);
 // Human-readable thermal state string.
 const char *ane_thermal_state_str(ANEThermalState state);
 
+// Check if the compiled kernel spills from SRAM to DRAM.
+// Returns true if the ANE compiler allocated an intermediate DRAM buffer,
+// meaning the model's activations exceed the ~32MB on-chip SRAM.
+// Spilling causes ~30% throughput drop. Restructure the model to fit SRAM.
+bool ane_sram_spill(const ANEKernel *k);
+
 // ===== Lifecycle =====
 
 // Compile budget: ANE silently fails after ~119 compilations per process.

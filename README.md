@@ -28,7 +28,7 @@
 > [!IMPORTANT]
 > **This IS:**
 > - Direct access to Apple's **private ANE API** (76 classes discovered, 35 exposed via libane)
-> - **FP16 native compute** on the Neural Engine hardware — 9.9 TFLOPS on M3 Pro
+> - **FP16 native compute** on the Neural Engine hardware — 12.8 TFLOPS on M3 Pro
 > - **1 compile → unlimited training steps** via Dynamic Spatial Packing
 >
 > **This is NOT:**
@@ -194,20 +194,20 @@ Sustained: 5.01 TFLOPS (fp16)
 Thermal:   Nominal (cool)
 
 ---- Chip Comparison (measured fp16 TFLOPS) ----
->> h15g (M3 Pro)        9.89 TFLOPS  █████████████████████░░░░░░░░░
+>> h15g (M3 Pro)       12.79 TFLOPS  █████████████████████████████░
    h16g (M4)           11.00 TFLOPS  ███████████████████████░░░░░░░
 
 ---- Summary ----
-Measured peak:       9.89 TFLOPS (fp16 matmul)
+Measured peak:       12.79 TFLOPS (fp16 matmul)
 Apple marketing:     18 TOPS (INT8, theoretical)
-Efficiency:          54.9% of Apple spec
+Efficiency:          71.1% of Apple spec
 Thermal:             Nominal (cool)
 ```
 
 On startup, `./ane` runs a quick peak measurement (~1s) and shows:
 ```
   + Hardware: h15g (M3 Pro), 16 cores
-  + ANE Peak: 9.90 TFLOPS (18 TOPS Apple spec, 55%)
+  + ANE Peak: 12.79 TFLOPS (18 TOPS Apple spec, 71%)
   + API: v1(35)
 ```
 
@@ -461,11 +461,11 @@ Full API documentation: **[libane/README.md](libane/README.md)**
 
 | Metric | Value | |
 |:---|---:|:---|
-| Measured Peak FP16 | **9.90 TFLOPS** | 128x stacked conv (amortized dispatch) |
-| Best Single Kernel | **4.73 TFLOPS** | 768×2048 sp256 |
+| Measured Peak FP16 | **12.79 TFLOPS** | 512ch sp128 depth128 stacked |
+| Best Single Kernel | **11.64 TFLOPS** | 512×4096 sp4096 |
 | Sustained Peak (5s) | **5.01 TFLOPS** | Continuous eval, no interruption |
 | Apple Marketing Spec | **18 TOPS** | INT8, theoretical |
-| Efficiency vs Spec | **55%** | Real fp16 matmul vs Apple INT8 TOPS |
+| Efficiency vs Spec | **71%** | Real fp16 matmul vs Apple INT8 TOPS |
 | Training Stories110M | **91–183 ms/step** | Depending on vocab size |
 | Dispatch Overhead | **~0.17 ms** | Minimum latency per kernel call |
 | QoS Background vs Default | **42% faster** | Less scheduling overhead |
@@ -505,7 +505,7 @@ That's why TOPS can be higher than TFLOPS on the same hardware. Apple publishes 
 | M2 Ultra | H14 x2 | **31.6** | 800 GB/s | ~18 | weights only | ~64 MB |
 | | | | | | | |
 | **M3** | H15 | 18 | 100 GB/s | ~9.4 | weights only | ~32 MB |
-| **M3 Pro** | H15 (h15g) | 18 | 150 GB/s | **9.4** | 1.0–1.14x | ~32 MB |
+| **M3 Pro** | H15 (h15g) | 18 | 150 GB/s | **12.79** | 1.0–1.14x | ~32 MB |
 | M3 Max | H15 (h15p) | 18 | 300–400 GB/s | ~9.5 | weights only | ~32 MB |
 | M3 Ultra | H15 x2 | **36** | 819 GB/s | ~19 | weights only | ~64 MB |
 | | | | | | | |
