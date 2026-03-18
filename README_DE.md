@@ -1,12 +1,11 @@
 <div align="center">
 
-<pre>
- ___    _   __ ______
+<pre><code> ___    _   __ ______
 /   |  / | / // ____/
 / /| | /  |/ // __/
 / ___ |/ /|  // /___
 /_/  |_/_/ |_//_____/  Training
-</pre>
+</code></pre>
 
 ### Reverse-Engineering Apples Neural Engine
 
