@@ -302,11 +302,11 @@ cmd_help() {
 # ===== Banner =====
 show_banner() {
     echo ""
-    echo -e "  ${BOLD}${W} ___    _   __ ______${NC}"
-    echo -e "  ${BOLD}${W}/   |  / | / // ____/${NC}"
-    echo -e "  ${BOLD}${W}/ /| | /  |/ // __/${NC}     ${D}Apple Neural Engine${NC}"
-    echo -e "  ${BOLD}${W}/ ___ |/ /|  // /___${NC}    ${D}Training Platform${NC}"
-    echo -e "  ${BOLD}${W}/_/  |_/_/ |_//_____/${NC}   ${D}1 Compile · ∞ Steps${NC}"
+    echo -e "     ${BOLD}${W} ___    _   __ ______${NC}"
+    echo -e "    ${BOLD}${W}/   |  / | / // ____/${NC}"
+    echo -e "   ${BOLD}${W}/ /| | /  |/ // __/${NC}     ${D}Apple Neural Engine${NC}"
+    echo -e "  ${BOLD}${W}/ ___ |/ /|  // /___${NC}     ${D}Training Platform${NC}"
+    echo -e " ${BOLD}${W}/_/  |_/_/ |_//_____/${NC}     ${D}by Klincov.it${NC}"
     echo ""
 }
 
