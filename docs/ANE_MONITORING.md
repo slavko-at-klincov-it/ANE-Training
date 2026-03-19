@@ -11,7 +11,7 @@
 |:---|:---|:---|:---|:---|
 | **Thermal State** | `NSProcessInfo.thermalState` | No | 4 levels | `ane_thermal_state()` in libane |
 | **Execution Latency** | `mach_absolute_time` / `clock_gettime` | No | Sub-microsecond | Benchmark, all tests |
-| **TFLOPS** | Latency + GFLOP calculation | No | ~1% variance | Benchmark |
+| **TFLOPS** | Latency + GFLOP calculation | No | ~1% variance | Benchmark (peak, not training) |
 | **ANE Power (mW)** | `sudo powermetrics --samplers ane_power` | Yes | ~1s interval | Dashboard only |
 | **CPU/GPU Power (mW)** | `sudo powermetrics --samplers cpu_power,gpu_power` | Yes | ~1s interval | Dashboard only |
 | **Compile Count** | Internal tracking | No | Exact | `ane_compile_count()` |
@@ -144,7 +144,7 @@ Also available but untested:
 
 - **93,000 evaluations** in 10 seconds
 - **Thermal state: Nominal (cool) throughout** — never changed
-- Average: 2.81 TFLOPS, 0.108 ms/eval
+- Average: 2.81 TFLOPS peak benchmark, 0.108 ms/eval (single kernel, not training)
 - One dip to 1.88 TFLOPS at ~2.5s (OS scheduling, not thermal)
 
 **Conclusion:** The ANE is thermally efficient. Even sustained full-speed operation does not trigger thermal pressure on M3 Pro. The MacBook fan did not activate. This suggests the ANE's power envelope is well within the cooling solution's capacity.
@@ -185,7 +185,7 @@ For comparison: CPU draws 2–8W, GPU draws 1–15W during equivalent compute.
 
 Since we can't access frequency, voltage, or per-core utilization, the optimization levers are:
 
-1. **Kernel Shape** — Larger spatial dims amortize dispatch overhead. Sweet spot: `768x2048 sp256` (single kernel) or `128x stacked` (peak throughput)
+1. **Kernel Shape** — Larger spatial dims amortize dispatch overhead. Sweet spot: `768x2048 sp256` (single kernel) or `128x stacked` (peak throughput). Note: real training throughput is ~6x lower than peak due to per-layer dispatch, IOSurface I/O, and CPU gradients
 2. **Dispatch Minimization** — The ~0.17ms dispatch floor is the primary bottleneck for small kernels. Fuse operations into fewer, larger kernels
 3. **QoS Background (9)** — Consistently 42% faster than Default (21). Less OS scheduling interference
 4. **SRAM Budget** — Keep working sets under 32MB. Beyond that, performance drops ~30% as data spills to DRAM

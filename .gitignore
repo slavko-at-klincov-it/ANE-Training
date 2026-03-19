@@ -62,3 +62,6 @@ training/test_ane_advanced
 
 # dSYM debug files
 *.dSYM
+libane/bench_gpu
+training/bench_model_sizes
+training/test_dw_ane

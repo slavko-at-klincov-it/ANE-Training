@@ -63,10 +63,10 @@ model.mil → model.bc.mlir → model.llir.bundle → model.hwx
 ```
 
 **Performance benchmarks** (M3 Pro):
-- Peak FP16 (small spatial): 9.36 TFLOPS
-- Peak FP16 (large spatial): 18.23 TOPS
+- ANE Silicon Peak: 12.79 TFLOPS (128x stacked conv benchmark)
+- Sustained Single-Kernel: 5.01 TFLOPS (continuous eval)
+- Real Training: 2.15 TFLOPS / 80.9 ms/step (pipeline), 1.87 TFLOPS / 93 ms/step (sequential)
 - INT8 yields only 1.0-1.14x (on M4: 1.88x) → not worth it on M3
-- Training: 183ms/step (32K vocab), 91ms/step (after vocab compaction)
 
 **20 ANE constraints** (from the Orion paper):
 - `concat` is rejected by the ANE compiler
@@ -178,7 +178,7 @@ ane_weight_free(&w);
 The maderix/ANE repo (`training/training_dynamic/`) — a working Transformer trainer that runs directly on the ANE.
 
 ### What we adapted
-- Dashboard TFLOPS: 15.8 (M4) → 9.36 (M3 Pro)
+- Dashboard TFLOPS: 15.8 (M4) → 12.79 peak / 2.15 real training (M3 Pro)
 - Created synthetic test data (500K tokens)
 - Pulled tokenizer via git-lfs
 - Verified: 50 steps stable, no NaN, no crashes

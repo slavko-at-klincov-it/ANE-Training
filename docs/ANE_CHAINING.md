@@ -145,8 +145,9 @@ hundreds of times sequentially.
 
 Since QoS=9 already has zero dispatch overhead:
 - **No need for chaining** to reduce inter-kernel latency in training
-- The 2x gap between single (4.73) and stacked (9.90) TFLOPS is due to **kernel size**, not dispatch
+- The gap between single-kernel peak (11.64) and stacked peak (12.79) TFLOPS is due to **kernel size**, not dispatch
 - Stacked kernels amortize per-kernel **compute setup**, not dispatch
+- Note: these are ANE silicon peak numbers. Real training achieves 2.15 TFLOPS (pipeline) / 1.87 TFLOPS (sequential)
 - Focus optimization on **larger fused kernels** rather than chaining small ones
 - `evaluateRealTimeWithModel:` is available as an alternative eval path if needed
 

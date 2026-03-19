@@ -7,7 +7,9 @@
 
 ## Real Training Results (Stories-110M)
 
-Actual training run with `train_large_ane`, random init, 100 steps:
+### Sequential Training (`train_large_ane`)
+
+Actual training run, random init, 100 steps:
 
 | Metric | Value |
 |:---|:---|
@@ -17,25 +19,42 @@ Actual training run with `train_large_ane`, random init, 100 steps:
 | **Compilation** | 86 kernels, 5.3s (one-time per batch) |
 | **Compile overhead** | 36% at 100 steps, <5% at 1000 steps |
 
-### Why 1.87 TFLOPS and Not 12.79?
+### Pipeline Parallel Training (`train_pipeline`)
+
+Overlaps CPU backward of step N with ANE forward of step N+1:
+
+| Metric | Value |
+|:---|:---|
+| **ms/step (sustained)** | **80.9 ms** |
+| **Total TFLOPS** | **2.15** (ANE + CPU combined) |
+| **Improvement** | 13% faster than sequential |
+
+### Why 2.15 TFLOPS and Not 12.79?
+
+Think of it like a truck:
+- **ANE Peak (12.79 TFLOPS)** = Empty truck on an open highway, pedal to the metal
+- **Sustained Single-Kernel (5.01 TFLOPS)** = Loaded truck on a highway -- steady speed, no stops
+- **Real Training (2.15 TFLOPS)** = Fully loaded truck in city traffic -- stops at every intersection (per-layer dispatch), loads/unloads cargo (IOSurface I/O), waits for paperwork (CPU gradients)
 
 | Factor | Explanation |
 |:---|:---|
-| **12.79 TFLOPS** | Theoretical ANE peak (128x stacked conv, single dispatch) |
+| **12.79 TFLOPS** | ANE silicon peak (128x stacked conv, single dispatch, benchmark only) |
 | **Per-layer dispatch** | Each of 12 layers needs separate ANE dispatch (~0.1ms each) |
-| **IOSurface I/O** | FP32↔FP16 conversion + lock/unlock per kernel (~3-5ms total) |
+| **IOSurface I/O** | FP32/FP16 conversion + lock/unlock per kernel (~3-5ms total) |
 | **CPU operations** | Residual adds, embedding, cross-entropy, Adam (~20ms) |
-| **CPU dW gradients** | cblas_sgemm for 7 weight matrices × 12 layers (~28ms) |
-| **1.87 TFLOPS** | Real training throughput including ALL overheads |
+| **CPU dW gradients** | cblas_sgemm for 7 weight matrices x 12 layers (~28ms) |
+| **2.15 TFLOPS** | Real training throughput including ALL overheads (pipeline) |
+| **1.87 TFLOPS** | Real training throughput including ALL overheads (sequential) |
 
-The 12.79 peak is what the ANE silicon can do. The 1.87 is what a full training step achieves.
+The 12.79 peak is what the ANE silicon can do in isolation. The 2.15 is what a full training step actually achieves.
 
 ---
 
-## Synthetic Per-Step Timing (ANE Eval + CPU dW Only)
+## Synthetic Per-Step Timing (ANE Eval + CPU dW Only) -- NOT Real Training
 
 Measures only ANE eval latency and CPU gradient computation, excluding IOSurface I/O,
 embedding, softmax, residual adds, and Adam. ~2.4x faster than real training.
+**These TFLOPS numbers are synthetic -- real training achieves 2.15 TFLOPS for Stories-110M.**
 
 | Model | Params | Dim | Hidden | Layers | Step Time | ANE | CPU dW | TFLOPS | Bottleneck |
 |:---|:---|:---|:---|:---|:---|:---|:---|:---|:---|
@@ -89,17 +108,18 @@ To train larger:
 
 ### Estimated Training Times (Real, M3 Pro)
 
-| Model | ms/step | Steps for 1M tokens | Time |
-|:---|:---|:---|:---|
-| Tiny-1M | ~3ms | 15,625 (seq=64) | ~47s |
-| Small-15M | ~12ms | 7,812 (seq=128) | ~1.6 min |
-| Medium-42M | ~35ms | 3,906 (seq=256) | ~2.3 min |
-| **Stories-110M** | **93ms** | **3,906** | **~6.0 min** |
-| Medium-250M | ~240ms | 3,906 | ~15.6 min |
-| Large-600M | ~450ms | 3,906 | ~29.3 min |
+| Model | ms/step (seq.) | ms/step (pipeline) | Steps for 1M tokens | Time (pipeline) |
+|:---|:---|:---|:---|:---|
+| Tiny-1M | ~3ms | ~3ms | 15,625 (seq=64) | ~47s |
+| Small-15M | ~12ms | ~11ms | 7,812 (seq=128) | ~1.4 min |
+| Medium-42M | ~35ms | ~30ms | 3,906 (seq=256) | ~2.0 min |
+| **Stories-110M** | **93ms** | **80.9ms** | **3,906** | **~5.3 min** |
+| Medium-250M | ~240ms | ~210ms | 3,906 | ~13.7 min |
+| Large-600M | ~450ms | ~390ms | 3,906 | ~25.4 min |
 
 Real times include IOSurface overhead (~2.4x synthetic benchmark).
 First batch adds ~5s compilation overhead.
+Stories-110M measured: sequential = 1.87 TFLOPS, pipeline = 2.15 TFLOPS.
 
 ---
 

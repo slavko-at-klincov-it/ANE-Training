@@ -28,7 +28,7 @@
 > [!IMPORTANT]
 > **This IS:**
 > - Direct access to Apple's **private ANE API** (76 classes discovered, 35 exposed via libane)
-> - **FP16 native compute** on the Neural Engine hardware — 12.8 TFLOPS on M3 Pro
+> - **FP16 native compute** on the Neural Engine hardware — 12.8 TFLOPS peak (2.15 TFLOPS real training)
 > - **1 compile → unlimited training steps** via Dynamic Spatial Packing
 >
 > **This is NOT:**
@@ -193,14 +193,16 @@ Evals:     31200 in 5.0s
 Sustained: 5.01 TFLOPS (fp16)
 Thermal:   Nominal (cool)
 
----- Chip Comparison (measured fp16 TFLOPS) ----
+---- Chip Comparison (measured fp16 peak TFLOPS) ----
 >> h15g (M3 Pro)       12.79 TFLOPS  █████████████████████████████░
    h16g (M4)           11.00 TFLOPS  ███████████████████████░░░░░░░
+   (These are ANE silicon peak numbers — see below for real training)
 
 ---- Summary ----
-Measured peak:       12.79 TFLOPS (fp16 matmul)
+ANE silicon peak:    12.79 TFLOPS (128x stacked conv benchmark)
+Sustained single:    5.01 TFLOPS (continuous eval, one kernel)
+Real training:       2.15 TFLOPS (Stories-110M, pipeline parallel)
 Apple marketing:     18 TOPS (INT8, theoretical)
-Efficiency:          71.1% of Apple spec
 Thermal:             Nominal (cool)
 ```
 
@@ -208,6 +210,7 @@ On startup, `./ane` runs a quick peak measurement (~1s) and shows:
 ```
   + Hardware: h15g (M3 Pro), 16 cores
   + ANE Peak: 12.79 TFLOPS (18 TOPS Apple spec, 71%)
+  + Real Training: ~2.15 TFLOPS (Stories-110M)
   + API: v1(35)
 ```
 
@@ -459,20 +462,31 @@ Full API documentation: **[libane/README.md](libane/README.md)**
 
 ## Benchmark Results (M3 Pro)
 
+> [!IMPORTANT]
+> **Peak vs Real Training — The Truck Analogy**
+>
+> Think of the ANE like a truck:
+> - **ANE Peak (12.79 TFLOPS)** = Empty truck on an open highway, pedal to the metal
+> - **Sustained Single-Kernel (5.01 TFLOPS)** = Loaded truck on a highway -- steady speed, no stops
+> - **Real Training (2.15 TFLOPS)** = Fully loaded truck in city traffic -- stops at every intersection (per-layer dispatch), loads/unloads cargo (IOSurface I/O), waits for paperwork (CPU gradients)
+>
+> The peak number shows what the ANE silicon *can* do. The training number shows what a full training step *actually* achieves.
+
 | Metric | Value | |
 |:---|---:|:---|
-| Measured Peak FP16 | **12.79 TFLOPS** | 512ch sp128 depth128 stacked |
-| Best Single Kernel | **11.64 TFLOPS** | 512×4096 sp4096 |
-| Sustained Peak (5s) | **5.01 TFLOPS** | Continuous eval, no interruption |
+| ANE Silicon Peak | **12.79 TFLOPS** | 128x stacked conv benchmark (peak only) |
+| Best Single Kernel | **11.64 TFLOPS** | 512x4096 sp4096 (peak only) |
+| Sustained Single-Kernel (5s) | **5.01 TFLOPS** | Continuous eval, one kernel shape |
+| **Real Training (pipeline)** | **2.15 TFLOPS** | **Stories-110M, 80.9 ms/step** |
+| **Real Training (sequential)** | **1.87 TFLOPS** | **Stories-110M, 93 ms/step** |
 | Apple Marketing Spec | **18 TOPS** | INT8, theoretical |
-| Efficiency vs Spec | **71%** | Real fp16 matmul vs Apple INT8 TOPS |
-| Training Stories110M | **91–183 ms/step** | Depending on vocab size |
+| Efficiency (training vs spec) | **12%** | Real training throughput vs Apple INT8 TOPS |
 | Dispatch Overhead | **~0.17 ms** | Minimum latency per kernel call |
 | QoS Background vs Default | **42% faster** | Less scheduling overhead |
 | Thermal under Load | **Nominal (cool)** | No throttling after 10s sustained |
 
 > [!NOTE]
-> Apple's "18 TOPS" is an INT8 peak theoretical number. Real FP16 matmul throughput is lower due to dispatch overhead, memory bandwidth, and the fp16 data path being narrower than INT8. **Run `./ane bench` to measure your chip's actual peak.**
+> Apple's "18 TOPS" is an INT8 peak theoretical number. The 12.79 TFLOPS peak is measured with 128x stacked convolutions that amortize all overhead -- it represents raw ANE silicon capability, not what you get during training. Real training throughput (2.15 TFLOPS) includes per-layer dispatch, IOSurface I/O, and CPU gradient computation. **Run `./ane bench` to measure your chip's peak.**
 
 <details>
 <summary><i>TFLOPS vs TOPS — what's the difference?</i></summary>
@@ -492,7 +506,7 @@ That's why TOPS can be higher than TFLOPS on the same hardware. Apple publishes 
 > [!NOTE]
 > **The ANE is identical across base/Pro/Max.** Within a generation: same 16-core Neural Engine. Pro/Max only add more GPU + bandwidth. **Only Ultra doubles the ANE** (32 cores). Memory bandwidth does **not** help the ANE as long as tensors stay within the ~32MB SRAM.
 
-| Chip | Arch | ANE TOPS | Mem BW | TFLOPS\* | INT8 | SRAM |
+| Chip | Arch | ANE TOPS | Mem BW | Peak TFLOPS\* | INT8 | SRAM |
 |:---|:---|---:|---:|---:|:---|---:|
 | **M1** | H13 | 11 | 68 GB/s | ~5.5 | weights only | ~32 MB |
 | M1 Pro | H13 | 11 | 200 GB/s | ~5.5 | weights only | ~32 MB |
@@ -517,7 +531,7 @@ That's why TOPS can be higher than TFLOPS on the same hardware. Apple publishes 
 | M5 Pro | — | n/a | 307 GB/s | ~12–14† | TBD | ~32 MB |
 | M5 Max | — | n/a | 614 GB/s | ~12–14† | TBD | ~32 MB |
 
-<sub>\* Measured FP16 TFLOPS on ANE (Conv 1x1). M2/M4 values from maderix/ANE benchmarks.</sub><br>
+<sub>\* Measured FP16 peak TFLOPS on ANE (Conv 1x1, stacked benchmark). These are peak numbers — real training throughput is ~6x lower due to per-layer dispatch, IOSurface I/O, and CPU gradients. M2/M4 values from maderix/ANE benchmarks.</sub><br>
 <sub>† M5 ANE estimate based on M3→M4 trend. Apple has not published separate ANE TOPS.</sub>
 
 <details>
@@ -536,7 +550,7 @@ That's why TOPS can be higher than TFLOPS on the same hardware. Apple publishes 
 
 &nbsp;
 
-Based on Stories110M (124 vocab, compacted), measured on M3 Pro = 91ms/step:
+Based on Stories110M (124 vocab, compacted), measured on M3 Pro = 80.9 ms/step (pipeline) / 93 ms/step (sequential):
 
 | Chip | Estimated ms/step | INT8 ms/step | Factor vs M3 Pro |
 |:---|---:|---:|:---|
@@ -598,7 +612,7 @@ Based on Stories110M (124 vocab, compacted), measured on M3 Pro = 91ms/step:
 ### Bottleneck Analysis (M3 Pro, Stories110M)
 
 ```
-Training Step = 91ms:
+Sequential Training Step = 93ms (1.87 TFLOPS):
 
   ANE Forward          ██████░░░░░░░░░░░░░░  22ms  (24%)
   ANE Backward (dx)    ████████░░░░░░░░░░░░  15ms  (16%)
@@ -609,6 +623,9 @@ Training Step = 91ms:
   Overhead             █████████░░░░░░░░░░░  18ms  (20%)
 
   ANE: 41%  ·  CPU: 59%
+
+Pipeline Parallel = 80.9ms (2.15 TFLOPS):
+  Overlaps CPU backward of step N with ANE forward of step N+1
 ```
 
 ### Implemented Optimizations
@@ -619,12 +636,12 @@ Training Step = 91ms:
 | **done** | **FP16 Overflow Protection** — Output/gradient sanitization | Prevents NaN/Inf divergence |
 | **done** | **SRAM Budget Tracking** — Warning at >32MB | Diagnostics in `ane_compile()` |
 | **done** | **Compile Budget Warning** — Warning at 110/119 | Safety net for legacy code |
+| **done** | **Pipeline Parallelism** — CPU Backward ‖ ANE Forward | 93ms → **80.9ms/step** (1.87 → **2.15 TFLOPS**) |
 
 ### Open Optimizations
 
 | Optimization | Gain | Effort |
 |:---|:---|:---|
-| **Pipeline Parallelism** — CPU Backward ‖ ANE Forward | ~40% latency | High |
 | **Attention on ANE** — via `where()` MIL op | ~5ms CPU savings | High |
 | **RMSNorm on ANE** — as MIL program | ~5ms CPU savings | Medium |
 | **LoRA Adapter-as-Input** — Hot-swap fine-tuning | Zero recompile | Medium |

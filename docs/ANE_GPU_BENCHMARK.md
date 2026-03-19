@@ -82,9 +82,13 @@ Estimated crossover point: **~1B+ parameter models** with batch size ≥ 512.
 ```
 Stories110M / Qwen3-0.6B:
 
-ANE:  Forward + Backward (Conv/Matmul)     12.13 TFLOPS (fp16)
+ANE:  Forward + Backward (Conv/Matmul)     12.79 TFLOPS peak (fp16, benchmark)
+      Real training throughput:             2.15 TFLOPS (pipeline, 80.9 ms/step)
 CPU:  dW Gradients + Adam + RMSNorm         1.2-1.7 TFLOPS (fp32 via AMX)
-GPU:  ❌ Not beneficial at this scale
+GPU:  Not beneficial at this scale
+
+Note: The 12.79 peak is ANE silicon capability measured with stacked convolutions.
+Real training is ~6x lower due to per-layer dispatch, IOSurface I/O, and CPU work.
 
 Total pipeline: ANE + CPU is optimal.
 GPU API (ane_gpu.h) is built and ready for larger models.

@@ -1,7 +1,26 @@
 # ANE Performance Tuning Guide
 
 Comprehensive results from three performance sweeps on Apple Neural Engine (M3 Pro, h15g).
-All measurements use 1×1 convolution kernels compiled and executed via the private ANE framework.
+All measurements use 1x1 convolution kernels compiled and executed via the private ANE framework.
+
+---
+
+## Peak vs Real Training Performance
+
+> **All numbers in this document are ANE silicon peak benchmarks, not training throughput.**
+>
+> | Metric | TFLOPS | What it measures |
+> |:---|---:|:---|
+> | ANE Silicon Peak | 12.79 | 128x stacked conv, single dispatch, all overhead amortized |
+> | Best Single Kernel | 11.64 | 512x4096 sp4096, one large kernel |
+> | Sustained Single-Kernel | 5.01 | Continuous eval of one kernel for 5 seconds |
+> | **Real Training (pipeline)** | **2.15** | **Stories-110M, 80.9 ms/step, full training loop** |
+> | **Real Training (sequential)** | **1.87** | **Stories-110M, 93 ms/step, full training loop** |
+>
+> The sweep results below help find the optimal kernel shapes for maximum ANE throughput.
+> However, real training throughput is ~6x lower than peak because each training step involves
+> per-layer dispatch overhead, IOSurface I/O (FP32/FP16 conversion), and CPU gradient computation.
+> See [ANE_MODEL_SIZE_BENCHMARK.md](ANE_MODEL_SIZE_BENCHMARK.md) for real training numbers.
 
 ---
 
@@ -205,12 +224,14 @@ calling thread is at least USER_INITIATED priority.
 
 ## 5. Before/After Comparison
 
-Performance improvements achieved through systematic tuning:
+Peak benchmark improvements achieved through systematic tuning (these are ANE silicon peak numbers, not training throughput):
 
 | Metric               | Before   | After    | Improvement |
 |----------------------|----------|----------|-------------|
-| Peak stacked         | 9.90 TFLOPS | 12.79 TFLOPS | **+29%**    |
-| Peak single kernel   | 4.73 TFLOPS | 11.64 TFLOPS | **+146%**   |
+| Peak stacked (benchmark) | 9.90 TFLOPS | 12.79 TFLOPS | **+29%**    |
+| Peak single kernel (benchmark) | 4.73 TFLOPS | 11.64 TFLOPS | **+146%**   |
+| Real training (sequential) | — | 1.87 TFLOPS | 93 ms/step |
+| Real training (pipeline) | — | 2.15 TFLOPS | 80.9 ms/step |
 
 The stacked improvement (+29%) comes from finding the optimal channel/depth
 configuration. The single-kernel improvement (+146%) is more dramatic because

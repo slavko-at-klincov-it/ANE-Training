@@ -67,6 +67,12 @@ model.mil → compile → model.bc.mlir → model.llir.bundle → model.hwx
 
 ## 1. YOUR M3 PRO BENCHMARK RESULTS
 
+> **Note:** These are early benchmark results with suboptimal parameters (small spatial, untuned channels).
+> After systematic tuning (see [ANE_PERFORMANCE_TUNING.md](docs/ANE_PERFORMANCE_TUNING.md)):
+> - ANE Silicon Peak: **12.79 TFLOPS** (512ch sp128 depth128)
+> - Sustained Single-Kernel: **5.01 TFLOPS**
+> - Real Training (Stories-110M): **2.15 TFLOPS** / 80.9 ms/step (pipeline), **1.87 TFLOPS** / 93 ms/step (sequential)
+
 ### Throughput (Single Conv)
 | Config | Weight (MB) | ms/eval | TFLOPS |
 |--------|------------|---------|--------|
@@ -98,7 +104,7 @@ No sharp cliff detected — throughput scales gradually up to 73.5MB total, then
 | Metric | M3 Pro | M4 |
 |--------|--------|-----|
 | Apple marketing TOPS | 18 | 38 |
-| Measured peak (small spatial) | 9.36 TFLOPS | 15.8 TFLOPS |
+| Measured peak (stacked benchmark) | 12.79 TFLOPS | 15.8 TFLOPS |
 | Measured peak (large spatial) | 18.23 TOPS | 19.0 TOPS |
 | INT8 acceleration | 1.0-1.14x | 1.88x |
 | INT8 peak | 18.25 TOPS | 35.1 TOPS |
@@ -256,7 +262,7 @@ Based on Apple's coremltools MIL specification, these additional ops exist but a
 ## 4. CODE GAPS & WHAT NEEDS FIXING
 
 ### Critical for M3 Pro
-1. **Hardcoded 15.8 TFLOPS** → should be ~9.36 for M3 Pro (small spatial) or 18.23 (large spatial)
+1. **Hardcoded 15.8 TFLOPS** → updated to 12.79 peak / 2.15 real training for M3 Pro
    - Files: train_large.m, tiny_train.m, dashboard.py
 2. **INT8 training path missing** — only inference quantization exists; and on M3 Pro INT8 barely helps anyway
 
@@ -395,7 +401,7 @@ MIL text → _ANEInMemoryModelDescriptor → compile → E5 binary → load → 
 - 16 ANE cores (same as M3, M4)
 - Architecture type queryable via `_ANEDeviceInfo::aneArchitectureType`
 - INT8 acceleration minimal (1.0-1.14x vs M4's 1.88x)
-- Peak FP16: 18.23 TOPS (large spatial), 9.36 TFLOPS (training-relevant small spatial)
+- ANE Silicon Peak: 12.79 TFLOPS (128x stacked benchmark), Real Training: 2.15 TFLOPS (80.9 ms/step)
 - Suggested training QoS: `aneBackgroundTaskQoS` to avoid system interference
 
 ---
@@ -631,7 +637,7 @@ _ANEBuffer: { ANEIOSurfaceObject=..., symbolIndex=0, ANEBufferProducerAgent=... 
 - [ ] Build data preprocessing pipeline
 - [ ] Test additional MIL ops (layer_norm, gelu, gather, where)
 - [ ] Explore `_ANEChainingRequest` for layer-to-layer pipelining
-- [ ] Add proper M3 Pro TFLOPS values
+- [x] Add proper M3 Pro TFLOPS values (12.79 peak, 2.15 real training)
 
 ### Phase 4: Personal AI System
 - [ ] File watcher daemon (FSEvents)

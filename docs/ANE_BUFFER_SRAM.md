@@ -110,7 +110,7 @@ When chaining multiple ANE models (e.g., forward pass → backward pass), each m
 ### Potential Benefits
 
 1. **Reduced DRAM usage** — Chained models share intermediate buffers instead of allocating separately
-2. **Reduced dispatch overhead** — If chaining bypasses the per-kernel dispatch cost (~0.17ms), this could close the gap between single-kernel (4.73 TFLOPS) and stacked (9.90 TFLOPS)
+2. **Reduced dispatch overhead** — If chaining bypasses the per-kernel dispatch cost (~0.17ms), this could close the gap between single-kernel peak (11.64 TFLOPS) and stacked peak (12.79 TFLOPS)
 3. **Pipeline parallelism** — Output of model A flows directly as input to model B without CPU round-trip
 
 ### Status

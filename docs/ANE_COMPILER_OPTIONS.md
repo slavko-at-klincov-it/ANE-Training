@@ -77,10 +77,12 @@ NSDictionary *evalOpts = @{};  // no eval-time options needed
 Despite initial micro-benchmark results suggesting 15-30% improvement, controlled A/B testing
 with the full benchmark showed `kANEFKeepModelMemoryWiredKey: @YES` is **~18% slower**:
 
-| Config | Run 1 | Run 2 | Run 3 | Avg TFLOPS |
+| Config | Run 1 | Run 2 | Run 3 | Avg Peak TFLOPS |
 |:---|:---|:---|:---|:---|
 | Without Wired (default) | 3.96 | 4.28 | 4.86 | **4.37** |
 | With Wired | 3.22 | 3.71 | 3.81 | **3.58** |
+
+<sub>Note: These are single-kernel peak benchmark TFLOPS, not training throughput. Real training achieves ~2.15 TFLOPS.</sub>
 
 The wiring overhead during `loadWithQoS:` is not amortized for training workloads that compile
 multiple kernels. It may help for a single model loaded once and evaluated millions of times

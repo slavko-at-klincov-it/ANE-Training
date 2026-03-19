@@ -72,13 +72,16 @@ test_analytics_direct: test_analytics_direct.m
 test_analytics_plist: test_analytics_plist.m
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
+test_dw_ane: test_dw_ane.m ../libane/ane.m ../libane/ane.h
+	$(CC) $(CFLAGS) -o $@ test_dw_ane.m ../libane/ane.m $(LDFLAGS) -framework Accelerate
+
 probes: $(PROBES)
 
 tokenize:
 	python3 tokenize.py
 
 clean:
-	rm -f train train_large train_large_ane train_pipeline $(PROBES) test_rmsnorm_bwd test_classifier
+	rm -f train train_large train_large_ane train_pipeline $(PROBES) test_rmsnorm_bwd test_classifier test_dw_ane
 
 .PHONY: clean tokenize probes
 
