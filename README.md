@@ -138,9 +138,9 @@ Interactive menu — builds everything automatically.
 ## Quick Start
 
 ```bash
-./ane                # Interactive menu (auto-detects ANE peak TFLOPS)
+./ane                # Interactive menu
+./ane bench          # ⚡ Run this first! Auto-tunes + benchmarks for YOUR chip
 ./ane train          # Training demo (Y=2X, 1 compile, 60 steps)
-./ane bench          # Full benchmark (sweep + sustained peak + chip comparison)
 ./ane generate       # Shakespeare text generation on ANE
 ./ane explore        # Explore 35 ANE classes interactively
 ./ane info           # Hardware detection

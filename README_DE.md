@@ -139,7 +139,7 @@ Interaktives Menü — baut alles automatisch.
 ```bash
 ./ane                # Interaktives Menü (erkennt ANE Peak automatisch)
 ./ane train          # Training Demo (Y=2X, 1 Compile, 60 Steps)
-./ane bench          # Voller Benchmark (Sweep + Sustained Peak + Chip-Vergleich)
+./ane bench          # ⚡ Zuerst ausführen! Auto-Tune + Benchmark für DEINEN Chip
 ./ane generate       # Shakespeare Text-Generation auf ANE
 ./ane explore        # 35 ANE-Klassen interaktiv erkunden
 ./ane info           # Hardware-Erkennung
