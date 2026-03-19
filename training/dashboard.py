@@ -752,7 +752,7 @@ def draw(term):
             ane_tflops = (S.flops['ane'] * 1e6) / (S.ms_per_step * 1e-3) / 1e12
         total_tflops = (S.flops.get('total', 0) * 1e6) / (S.ms_per_step * 1e-3) / 1e12
     if not ane_util and ane_tflops:
-        ane_util = 100.0 * ane_tflops / 9.36  # M3 Pro peak (small spatial); M4=15.8
+        ane_util = 100.0 * ane_tflops / 12.79  # M3 Pro peak (stacked conv benchmark); M4~15.8
     compile_str = f'  Compile: {S.compile_ms/1000:.1f}s' if S.compile_ms > 0 else ''
     if ane_tflops:
         tflops_str = f' ANE: {ane_tflops:.2f}T'

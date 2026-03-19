@@ -100,17 +100,18 @@ ane_unlock_input(k, 0);
 
 ### 5. SRAM Budget Tracking — DONE
 
-**Problem:** M3 Pro SRAM ~16MB, throughput drop above 73.5MB, cliff at 129MB.
+**Problem:** ANE SRAM ~32MB (all Apple Silicon), throughput drops ~30% when exceeded.
 
-**Solution:** Track tensor sizes, warn when budget is exceeded.
+**Solution:** Track tensor sizes + compiler spill detection via `intermediateBufferHandle`.
 
 ```c
-// In ane_compile():
-size_t total_io = 0;
-for (int i = 0; i < n_inputs; i++) total_io += input_sizes[i];
-for (int i = 0; i < n_outputs; i++) total_io += output_sizes[i];
-if (total_io > 16 * 1024 * 1024)
-    fprintf(stderr, "libane: warning: total I/O %zuMB exceeds SRAM (~16MB)\n", total_io >> 20);
+// In ane_compile() — implemented in libane:
+uint64_t ibh = intermediateBufferHandle;  // from load reply
+if (ibh != 0)
+    fprintf(stderr, "libane: WARNING: SRAM spill detected\n");
+// Also heuristic I/O size check:
+if (total_io > 32 * 1024 * 1024)
+    fprintf(stderr, "libane: WARNING: total I/O exceeds SRAM (~32MB)\n");
 ```
 
 **Files:** `libane/ane.m`

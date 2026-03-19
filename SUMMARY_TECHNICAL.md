@@ -179,7 +179,7 @@ INT8 (quantized):
 | No causal masking in ANE SDPA | Attention computed on CPU |
 | FP16 gradient underflow | Global loss scaling |
 | Multi-input ANE requests fail | Pack all inputs into single spatial tensor |
-| ANE SRAM ~4-6MB | Performance cliff when exceeded; spatial packing helps locality |
+| ANE SRAM ~32MB | Performance cliff when exceeded; spatial packing helps locality |
 
 ## Performance (M4)
 

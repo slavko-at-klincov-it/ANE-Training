@@ -83,7 +83,11 @@ model.mil → compile → model.bc.mlir → model.llir.bundle → model.hwx
 | 3072ch x64sp | 18.0 | 0.494 | 2.45 |
 | 4096ch x64sp | 32.0 | 0.736 | 2.92 |
 
-### Peak Sustained (Sequential Convs)
+### Peak Sustained (Sequential Convs) — Historical (early measurements)
+
+> **Note:** Current peak is **12.79 TFLOPS** (512ch sp128 depth128, after systematic sweep).
+> These early results were measured before the performance tuning in v2.0.0.
+
 | Config | Weight (MB) | GFLOP | ms/eval | TFLOPS |
 |--------|------------|-------|---------|--------|
 | 128x conv 512ch sp64 | 64.0 | 4.29 | 0.459 | **9.36** |
