@@ -298,6 +298,19 @@ cmd_train() {
     echo ""
 }
 
+cmd_tune() {
+    check_system
+    ensure_built "bench_bin" "bench"
+    echo ""
+    "$EXAMPLES/bench" --tune --save-profile="$PROFILE"
+    if [ -f "$PROFILE" ]; then
+        ok "$(t "Hardware profile saved with tuned config" "Hardware-Profil mit getunter Config gespeichert")"
+        create_device_profile >/dev/null
+        ok "$(t "Device profile updated: $DEVICE_PROFILE" "Geräteprofil aktualisiert: $DEVICE_PROFILE")"
+    fi
+    echo ""
+}
+
 cmd_bench() {
     check_system
     ensure_built "bench_bin" "bench"
@@ -452,6 +465,7 @@ cmd_help() {
     echo -e "    ${C}./ane about${NC}        $(t "What is this? Why ANE training?" "Was ist das? Warum ANE-Training?")"
     echo -e "    ${C}./ane train${NC}        $(t "Training Demo (Y=2X, Dynamic Spatial Packing)" "Training Demo (Y=2X, Dynamic Spatial Packing)")"
     echo -e "    ${C}./ane bench${NC}        $(t "Auto-Benchmark (TFLOPS + chip comparison)" "Auto-Benchmark (TFLOPS + Chip-Vergleich)")"
+    echo -e "    ${C}./ane tune${NC}         $(t "Auto-tune + benchmark (find optimal config for YOUR chip)" "Auto-Tune + Benchmark (optimale Config für DEINEN Chip)")"
     echo -e "    ${C}./ane generate${NC}     $(t "Shakespeare text generation on ANE" "Shakespeare Text-Generation auf ANE")"
     echo -e "    ${C}./ane explore${NC}      $(t "ANE Framework Explorer (35 classes)" "ANE Framework Explorer (35 Klassen)")"
     echo -e "    ${C}./ane info${NC}         $(t "Hardware Info" "Hardware-Erkennung")"
@@ -598,6 +612,7 @@ case "${ARGS[0]:-}" in
     explore)  cmd_explore ;;
     info)     cmd_info ;;
     test)     cmd_test ;;
+    tune)     cmd_tune ;;
     monitor)  cmd_monitor ;;
     profile)  cmd_profile ;;
     help|-h|--help) cmd_help ;;

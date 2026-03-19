@@ -171,10 +171,120 @@ static int quick_peak(void) {
     return 0;
 }
 
+// ===== Auto-Tuner: find optimal stacked config for THIS chip =====
+// Adaptive 4-phase search: ~25 configs, ~2 minutes
+// Saves best_tune_ch, best_tune_sp, best_tune_depth, best_tune_tflops
+static int tune_ch, tune_sp, tune_depth;
+static double tune_tflops;
+
+static void auto_tune(void) {
+    const char *wname = "@model_path/weights/weight.bin";
+    printf("\n  \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88 ANE AUTO-TUNER \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\n\n");
+    printf("  Finding optimal kernel shape for this chip ...\n\n");
+
+    tune_ch = 512; tune_sp = 64; tune_depth = 128; tune_tflops = 0;
+    int compiles_start = ane_compile_count();
+
+    // Phase 1: Channel sweep (sp=64, depth=64)
+    printf("  Phase 1/4: Channel sweep\n");
+    {
+        int channels[] = {256, 384, 512, 640, 768, 1024};
+        int best_ch = 512; double best = 0;
+        for (int i = 0; i < 6; i++) {
+            if (ane_compile_count() >= ANE_COMPILE_SAFE_LIMIT - 20) break;
+            double ms = bench_stacked(channels[i], 64, 64, wname);
+            double gflop = 2.0 * channels[i] * channels[i] * 64 * 64 / 1e9;
+            double tflops = (ms > 0) ? gflop / ms : 0;
+            printf("    %4dch sp64  d64:  %6.2f TFLOPS%s\n", channels[i], tflops,
+                   tflops > best ? "  *" : "");
+            if (tflops > best) { best = tflops; best_ch = channels[i]; }
+        }
+        tune_ch = best_ch;
+        printf("    -> Best channel: %d\n\n", tune_ch);
+    }
+
+    // Phase 2: Spatial sweep (best_ch, depth=64)
+    printf("  Phase 2/4: Spatial sweep (ch=%d)\n", tune_ch);
+    {
+        int spatials[] = {32, 64, 128, 256, 512};
+        int best_sp = 64; double best = 0;
+        for (int i = 0; i < 5; i++) {
+            if (ane_compile_count() >= ANE_COMPILE_SAFE_LIMIT - 15) break;
+            double ms = bench_stacked(tune_ch, spatials[i], 64, wname);
+            double gflop = 2.0 * tune_ch * tune_ch * spatials[i] * 64 / 1e9;
+            double tflops = (ms > 0) ? gflop / ms : 0;
+            printf("    %4dch sp%-4d d64:  %6.2f TFLOPS%s\n", tune_ch, spatials[i], tflops,
+                   tflops > best ? "  *" : "");
+            if (tflops > best) { best = tflops; best_sp = spatials[i]; }
+        }
+        tune_sp = best_sp;
+        printf("    -> Best spatial: %d\n\n", tune_sp);
+    }
+
+    // Phase 3: Depth sweep (best_ch, best_sp)
+    printf("  Phase 3/4: Depth sweep (ch=%d, sp=%d)\n", tune_ch, tune_sp);
+    {
+        int depths[] = {32, 64, 128, 256};
+        int best_d = 128; double best = 0;
+        for (int i = 0; i < 4; i++) {
+            if (ane_compile_count() >= ANE_COMPILE_SAFE_LIMIT - 10) break;
+            double ms = bench_stacked(tune_ch, tune_sp, depths[i], wname);
+            double gflop = 2.0 * tune_ch * tune_ch * tune_sp * depths[i] / 1e9;
+            double tflops = (ms > 0) ? gflop / ms : 0;
+            printf("    %4dch sp%-4d d%-3d: %6.2f TFLOPS%s\n", tune_ch, tune_sp, depths[i], tflops,
+                   tflops > best ? "  *" : "");
+            if (tflops > best) { best = tflops; best_d = depths[i]; tune_tflops = tflops; }
+        }
+        tune_depth = best_d;
+        printf("    -> Best depth: %d\n\n", tune_depth);
+    }
+
+    // Phase 4: Fine-tune (±1 step around best)
+    printf("  Phase 4/4: Fine-tuning around %dch sp%d d%d\n", tune_ch, tune_sp, tune_depth);
+    {
+        struct { int ch; int sp; int d; } fine[] = {
+            {tune_ch - 128, tune_sp, tune_depth},
+            {tune_ch + 128, tune_sp, tune_depth},
+            {tune_ch, tune_sp / 2, tune_depth},
+            {tune_ch, tune_sp * 2, tune_depth},
+            {tune_ch, tune_sp, tune_depth / 2},
+            {tune_ch, tune_sp, tune_depth * 2 > 256 ? 256 : tune_depth * 2},
+            // Cross combos
+            {tune_ch - 128, tune_sp * 2, tune_depth},
+            {tune_ch + 128, tune_sp, tune_depth / 2},
+        };
+        for (int i = 0; i < 8; i++) {
+            int ch = fine[i].ch, sp = fine[i].sp, d = fine[i].d;
+            if (ch < 128 || ch > 1024 || sp < 32 || sp > 512 || d < 32 || d > 256) continue;
+            if (ane_compile_count() >= ANE_COMPILE_SAFE_LIMIT - 5) break;
+            double ms = bench_stacked(ch, sp, d, wname);
+            double gflop = 2.0 * ch * ch * sp * d / 1e9;
+            double tflops = (ms > 0) ? gflop / ms : 0;
+            printf("    %4dch sp%-4d d%-3d: %6.2f TFLOPS%s\n", ch, sp, d, tflops,
+                   tflops > tune_tflops ? "  * NEW BEST" : "");
+            if (tflops > tune_tflops) {
+                tune_ch = ch; tune_sp = sp; tune_depth = d; tune_tflops = tflops;
+            }
+        }
+    }
+
+    int compiles_used = ane_compile_count() - compiles_start;
+    printf("\n  ── Tuning Result ──\n\n");
+    printf("  Optimal config:  %dch sp%d depth%d\n", tune_ch, tune_sp, tune_depth);
+    printf("  Peak TFLOPS:     %.2f\n", tune_tflops);
+    printf("  Compiles used:   %d\n", compiles_used);
+    printf("  Thermal:         %s\n\n", ane_thermal_state_str(ane_thermal_state()));
+}
+
 int main(int argc, char *argv[]) {
     // --quick: fast peak measurement for CLI integration
     if (argc > 1 && strcmp(argv[1], "--quick") == 0)
         return quick_peak();
+
+    // --tune: auto-tune for this chip, then run full benchmark
+    int do_tune = 0;
+    for (int i = 1; i < argc; i++)
+        if (strcmp(argv[i], "--tune") == 0) do_tune = 1;
 
     // --save-profile=PATH: write profile after bench completes
     const char *profile_path = NULL;
@@ -203,6 +313,12 @@ int main(int argc, char *argv[]) {
     printf("  Build:  %s\n", info.build ? info.build : "?");
     printf("  API:    v%d (%d classes)\n", ane_api_info().api_version, ane_api_info().classes_found);
     printf("  Thermal: %s\n", ane_thermal_state_str(ane_thermal_state()));
+
+    // Run auto-tuner if requested
+    if (do_tune) {
+        auto_tune();
+        printf("  \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88 ANE BENCHMARK (with tuned config) \xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88\n\n");
+    }
 
     // Apple marketing spec for this chip
     double apple_tops = 0;
@@ -288,15 +404,26 @@ int main(int argc, char *argv[]) {
     printf("  %-24s %7s %7s %9s %7s\n", "Config", "Weights", "GFLOP", "Latency", "TFLOPS");
     printf("  %-24s %7s %7s %9s %7s\n", "------------------------", "-------", "-------", "---------", "-------");
 
-    struct { int ch; int sp; int depth; } stacks[] = {
+    struct { int ch; int sp; int depth; } stacks[12] = {
         {512, 64, 32}, {512, 64, 64}, {512, 64, 128},
-        // Optimal configs from performance sweep (2026-03-18)
+        // Known good configs
         {384, 128, 128}, {384, 128, 256},
         {512, 128, 128}, {640, 64, 128},
     };
-    int n_stacks = sizeof(stacks) / sizeof(stacks[0]);
+    int n_stacks = 7;
+    // Add auto-tuned config if it's different from existing ones
+    if (do_tune && tune_tflops > 0) {
+        int dup = 0;
+        for (int i = 0; i < n_stacks; i++)
+            if (stacks[i].ch == tune_ch && stacks[i].sp == tune_sp && stacks[i].depth == tune_depth)
+                dup = 1;
+        if (!dup && n_stacks < 12) {
+            stacks[n_stacks] = (typeof(stacks[0])){tune_ch, tune_sp, tune_depth};
+            n_stacks++;
+        }
+    }
     double peak_stacked = 0;
-    double results_stacked[7];
+    double results_stacked[12];
 
     for (int i = 0; i < n_stacks; i++) {
         int ch = stacks[i].ch, sp = stacks[i].sp, d = stacks[i].depth;
@@ -549,6 +676,14 @@ int main(int argc, char *argv[]) {
             fprintf(fp, "recommended_max_compiles=1000\n");
             fprintf(fp, "compile_budget=%d\n", ANE_COMPILE_BUDGET);
             fprintf(fp, "\n");
+            if (do_tune && tune_tflops > 0) {
+                fprintf(fp, "# Auto-tuned optimal config for this chip\n");
+                fprintf(fp, "tuned_ch=%d\n", tune_ch);
+                fprintf(fp, "tuned_sp=%d\n", tune_sp);
+                fprintf(fp, "tuned_depth=%d\n", tune_depth);
+                fprintf(fp, "tuned_tflops=%.2f\n", tune_tflops);
+                fprintf(fp, "\n");
+            }
             fprintf(fp, "# Timestamp (unix epoch, for cache expiry)\n");
             fprintf(fp, "timestamp=%ld\n", (long)now);
 
