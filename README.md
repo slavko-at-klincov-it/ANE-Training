@@ -671,20 +671,36 @@ ANE-Training/
 │
 ├── examples/ ·························· Runnable Demos
 │   ├── demo_train.c                     Training Demo (Dynamic Spatial Packing)
-│   ├── bench.c                          Auto-Benchmark (with thermal monitoring)
+│   ├── bench.c                          Auto-Benchmark + Auto-Tuner
 │   ├── generate.c                       Text Generation (Dynamic Spatial Packing)
 │   ├── explore.m                        ANE Explorer
 │   └── Makefile
 │
-├── docs/ ······························ Research Documentation
-│   └── ANE_MONITORING.md               Monitoring Deep Dive (what works, what's locked)
+├── training/ ·························· Training Pipeline
+│   ├── train_pipeline.m                 Pipeline Parallel (ANE Forward ‖ CPU Backward)
+│   ├── train_large_ane.m                ANE Training (sequential baseline)
+│   ├── dashboard.py                     TUI Dashboard (blessed + powermetrics)
+│   ├── stories_config.h                 Model config (Stories110M / Qwen3-0.6B)
+│   ├── forward.h / backward.h          Forward/backward pass implementations
+│   └── Makefile
 │
-└── libane/ ···························· Our C API
-    ├── ane.h                            Stable API (thermal, device info, compile)
-    ├── ane.m                            Implementation + Version Detection
-    ├── test_ane.c                       Test Suite (3/3 passed)
-    ├── README.md                        API Documentation
-    └── Makefile
+├── docs/ ······························ Research Documentation
+│   ├── ANE_MONITORING.md               Thermal, device info, what's measurable
+│   ├── ANE_PERFORMANCE_TUNING.md       Sweep results, optimal parameters
+│   ├── ANE_COMPILER_OPTIONS.md         Runtime option keys, KeepMemoryWired
+│   ├── ANE_CHAINING.md                 Chaining = loopback, dispatch analysis
+│   └── ANE_BUFFER_SRAM.md             Buffer architecture, SRAM limits
+│
+├── libane/ ···························· Core C API
+│   ├── ane.h                            ANE API (compile, eval, thermal, SRAM spill)
+│   ├── ane.m                            Implementation + Version Detection
+│   ├── ane_gpu.h                        Optional Metal GPU API (matmul, sync)
+│   ├── ane_gpu.m                        Metal loaded via dlopen at runtime
+│   ├── test_ane.c / test_gpu.c          Test Suites
+│   └── Makefile
+│
+└── assets/ ···························· Model Assets
+    └── models/tokenizer.bin             Tokenizer (Stories110M)
 ```
 
 ---

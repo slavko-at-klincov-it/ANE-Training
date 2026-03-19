@@ -1,4 +1,4 @@
-# maderix/ANE clone (reference, not our code)
+# maderix/ANE clone (reference only, can be deleted)
 repo/
 
 # Personal AI (separate repo: ANE-PersonalAI)
@@ -8,15 +8,6 @@ personal-ai/
 *.dylib
 *.o
 *.d
-inmem_bench
-inmem_peak
-inmem_basic
-sram_bench
-sram_probe
-ane_int8_bench
-test_chaining
-test_chaining2
-test_advanced
 
 # Python
 .venv/
@@ -36,20 +27,38 @@ CLAUDE.md
 .vscode/
 .idea/
 
-# Data files
+# Data / model files (large, downloaded separately)
 *.bin
-!libane/test_ane.c
+!assets/**/*.bin
 
-# Compiled binaries
-libane/test_ane
+# Compiled binaries — examples
 examples/demo_train
 examples/bench
 examples/generate
 examples/explore
-*.dSYM
+
+# Compiled binaries — libane
+libane/test_ane
+libane/test_gpu
+libane/libane_gpu.dylib
+
+# Compiled binaries — training (exclude source, block executables)
+training/train
+training/train_large
+training/train_large_ane
+training/train_pipeline
+training/bench_ane_peak
+# Block compiled test/sweep binaries but allow source (.m, .c)
+training/test_weight_reload
+training/test_perf_stats
+training/test_qos_sweep
+training/test_ane_advanced
 
 # Temp
 /tmp/
 
 # macOS bookmark files
 *.webloc
+
+# dSYM debug files
+*.dSYM

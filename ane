@@ -365,7 +365,7 @@ cmd_profile() {
 
 cmd_monitor() {
     check_system
-    local TRAINING="$DIR/repo/training"
+    local TRAINING="$DIR/training"
     if [ ! -f "$TRAINING/test_ane_monitor" ]; then
         echo ""
         info "$(t "Building ANE monitor ..." "Baue ANE Monitor ...")"
