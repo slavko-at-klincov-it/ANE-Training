@@ -218,56 +218,15 @@ output = matmul(attn, V)
 
 ---
 
-## P2 — Long-term (Hybrid ANE + GPU)
+## P2 — ~~Long-term (Hybrid ANE + GPU)~~ REJECTED
 
-### 12. ANE Forward + GPU Backward
-
-```
-┌─────────────────────────────┐
-│  ANE (libane)               │
-│  Linear, Conv, Embedding    │
-│  Output → IOSurface         │
-└────────────┬────────────────┘
-             │ Zero-Copy (Unified Memory)
-             ▼
-┌─────────────────────────────┐
-│  GPU (MLX / MPSGraph)       │
-│  Attention, Softmax, RoPE   │
-│  Backward Pass (Autodiff)   │
-│  Adam Optimizer              │
-└────────────┬────────────────┘
-             │ Weight Update
-             ▼
-┌─────────────────────────────┐
-│  Delta Compilation / LoRA   │
-│  Weights → ANE              │
-└─────────────────────────────┘
-```
-
-**Prerequisite:** IOSurface-to-Metal-buffer zero-copy mapping.
-
-**Estimated gain:** 2-3x overall speedup.
-
----
-
-### 13. GPU FlashAttention
-
-Metal FlashAttention 2.0 exists (Draw Things Engineering). For long sequences (>512 tokens) significantly faster than CPU attention.
-
-**Gain:** 3-5x for attention computation.
-
----
-
-### 14. Leverage M5 GPU Neural Accelerators
-
-M5 has three ML accelerators:
-- **ANE** (16-core, ~38+ TOPS) — via libane
-- **GPU Neural Accelerators** (10-40 per chip, ~95 TOPS on M5 Pro) — via Metal 4 TensorOps
-- **CPU** (NEON/AMX)
-
-For maximum performance: ANE for forward, GPU-NAs for backward.
-
-**Prerequisite:** M5 hardware + Metal 4 SDK.
+> **Status: Explored and rejected (2026-03-19).**
+> GPU (Metal) benchmarked at 3-8x slower than CPU/AMX for training-relevant matmuls.
+> ANE + GPU combination tested — adds synchronization overhead without throughput gain.
+> ANE's real USP is **background training** (GPU stays free), not competing with GPU on throughput.
+> For max throughput, use MLX (GPU-only). For background training, use ANE (this project).
+>
+> See `docs/ANE_MODEL_SIZE_BENCHMARK.md` for detailed benchmark data.
 
 ---
 

@@ -119,14 +119,13 @@ This is how Apple chains GPU→ANE→GPU in CoreML pipelines without CPU round-t
 - `GraphANESharedEventHandler` — MPSGraph integration
 - `MPSGraphAneSessionDescriptor` — MPSGraph↔ANE session
 
-### Potential for Training
+### Practical Relevance
 
-SharedEvents could enable:
-1. **GPU→ANE pipeline**: GPU computes gradients, signals ANE to run forward pass
-2. **ANE→CPU notification**: ANE signals CPU when eval completes (async eval)
-3. **Multi-model coordination**: Sync between forward and backward ANE kernels
+SharedEvents enable GPU↔ANE synchronization, which Apple uses internally in CoreML.
 
-Requires creating `IOSurfaceSharedEvent` objects — not yet tested.
+For this project: **not beneficial.** GPU benchmarking showed Metal is 3-8x slower than CPU/AMX
+for training-relevant operations. Combining ANE + GPU adds synchronization overhead without
+throughput gain. ANE's value is background training (GPU stays free), not GPU coordination.
 
 ---
 

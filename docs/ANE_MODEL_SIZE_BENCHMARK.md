@@ -102,7 +102,7 @@ To train larger:
 | **ANE kernel tuning** (shape optimization) | <42M | +30-50% (amortize dispatch) |
 | **DisableIOFences** | All sizes | +1-2% |
 | **Pipeline Parallelism** (Forward‖Backward) | 110M+ | +30-40% (overlap ANE+CPU) |
-| **GPU for dW gradients** | 1B+ | +50-70% (when CPU is 80%+ bottleneck) |
+| ~~GPU for dW gradients~~ | ~~1B+~~ | Tested: GPU 3-8x slower than CPU/AMX, rejected |
 | **INT8 W8A8** (M4+ only) | All sizes | +88% ANE throughput |
 | **FP16 training** | 600M+ | 2x memory savings → larger models fit |
 

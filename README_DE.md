@@ -578,14 +578,14 @@ Basierend auf Stories110M (124 Vocab, compacted), gemessen auf M3 Pro = 80.9 ms/
 
 **M4 (38 TOPS)** — **Der große Sprung**: 2x TOPS, echtes W8A8 INT8. Training-Steps halbieren sich. INT8-Quantisierung lohnt sich erstmals. Gleicher ~32MB SRAM.
 
-**M5 (Fusion Architecture)** — ANE selbst leicht schneller, aber die GPU Neural Accelerators (10–40 pro Chip) sind der Game-Changer. Via Metal/MLX nutzbar, nicht via libane. Für maximale Performance: Hybrid ANE+GPU Ansatz.
+**M5 (Fusion Architecture)** — ANE selbst leicht schneller. GPU Neural Accelerators (10–40 pro Chip) via Metal/MLX nutzbar, nicht via libane. Für maximalen Durchsatz: MLX nutzen. Für Background-Training während die GPU beschäftigt ist: ANE (dieses Projekt).
 
 **Ultra-Varianten (M1–M3)** — Doppelter ANE (32 Cores, 2x TOPS). Einzige Variante wo Pro/Max → Ultra einen echten ANE-Unterschied macht. Beide Dies arbeiten parallel — ideal für größere Modelle die auf 16 Cores nicht passen.
 
 </details>
 
 > [!IMPORTANT]
-> Die GPU Neural Accelerators im M5 sind über **Metal/MLX** erreichbar, **nicht** über die privaten ANE-APIs die `libane` nutzt. Für `libane`-User zählt primär der schnellere Neural Engine + höhere Memory-Bandwidth. Für die vollen ~133 TOPS braucht man Apples MLX-Framework — das ist offiziell und stabil.
+> Die GPU Neural Accelerators im M5 sind über **Metal/MLX** erreichbar, **nicht** über die privaten ANE-APIs die `libane` nutzt. Für maximalen Durchsatz: MLX nutzen. ANE-Training hat den Vorteil im **Hintergrund** zu laufen ohne die GPU zu blockieren — ideal zum Trainieren während man arbeitet.
 
 ---
 
