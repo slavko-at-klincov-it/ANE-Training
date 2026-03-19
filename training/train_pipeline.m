@@ -384,6 +384,11 @@ static void pipeline_backward(
 ) {
     uint64_t t0, t1;
 
+    // Wait for previous step's dW tasks to finish before accumulating new gradients
+    t0 = mach_absolute_time();
+    dispatch_group_wait(dw_grp, DISPATCH_TIME_FOREVER);
+    t1 = mach_absolute_time(); *t_cblas_wait += tb_ms(t1-t0);
+
     // Classifier backward: dx_final = embed^T @ dlogits (CPU)
     t0 = mach_absolute_time();
     cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans,
@@ -539,10 +544,10 @@ static void pipeline_backward(
         free(dx_rms1);
     }
 
-    // Embedding backward (must wait for dW group to avoid contention on gembed)
-    t0 = mach_absolute_time();
-    dispatch_group_wait(dw_grp, DISPATCH_TIME_FOREVER);
-    t1 = mach_absolute_time(); *t_cblas_wait += tb_ms(t1-t0);
+    // Embedding backward — accumulate into gembed
+    // NOTE: we do NOT dispatch_group_wait here. The dW tasks from this backward
+    // will overlap with the NEXT step's forward on ANE. The wait happens at the
+    // start of the next backward call (or at drain/adam time).
     embed_backward(gembed, dy, input_tokens, DIM, SEQ);
 }
 
