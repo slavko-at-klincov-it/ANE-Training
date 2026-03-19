@@ -43,6 +43,38 @@
 
 ---
 
+## Use Cases
+
+> The ANE is a **dedicated chip that sits idle** on every Mac. This project puts it to work — training in the background while your GPU, CPU, and battery stay free.
+
+| Use Case | What Happens |
+|:---|:---|
+| **Continuous Learning** | ANE trains on your daily data (code, docs, emails) while you work. Your personal AI gets smarter every day — without you noticing. |
+| **Overnight Fine-Tuning** | Start before bed, MacBook charges, ANE trains. Morning: your model knows your codebase, your writing style, your patterns. |
+| **100% Private** | Data never leaves your device. No cloud, no API calls, no account. Everything stays on your Mac. |
+| **Zero Impact** | GPU renders, CPU compiles, ANE trains. No battery drain, no fan noise, no slowdown. |
+
+**Throughput** (Tiny-ANE 13M, M3 Pro): `12.6 steps/sec` · `11.5M tokens/hour` · `92M tokens overnight (8h)`
+
+<details>
+<summary><b>What this is NOT for</b></summary>
+
+&nbsp;
+
+- **Pre-training large LLMs** — ANE peak is 2.15 TFLOPS real training. A 7B model would take weeks.
+- **Image generation** — Diffusion models need GPU-level throughput and VRAM.
+- **Anything >1B parameters** — The ANE's 32MB SRAM and FP16 pipeline are designed for small, focused models.
+- **Beating the GPU** — MLX/Metal is faster. ANE's advantage is running *alongside* the GPU, not replacing it.
+
+For the right workload (small models, continuous learning, background fine-tuning), the ANE is uniquely useful — because it's the only accelerator on your Mac that isn't busy.
+
+</details>
+
+> [!TIP]
+> Detailed throughput calculations, concrete examples, and a comparison of ANE vs MLX vs Cloud: **[docs/ANE_USE_CASES.md](docs/ANE_USE_CASES.md)**
+
+---
+
 <table>
 <tr>
 <td width="50%">
@@ -707,6 +739,7 @@ ANE-Training/
 │   └── Makefile
 │
 ├── docs/ ······························ Research Documentation
+│   ├── ANE_USE_CASES.md                Use cases, throughput, continuous learning vision
 │   ├── ANE_MONITORING.md               Thermal, device info, what's measurable
 │   ├── ANE_PERFORMANCE_TUNING.md       Sweep results, optimal parameters
 │   ├── ANE_COMPILER_OPTIONS.md         Runtime option keys, KeepMemoryWired

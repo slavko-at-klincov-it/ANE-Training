@@ -64,3 +64,5 @@ libane/bench_gpu
 training/bench_model_sizes
 training/test_dw_ane
 libane/test_gpu
+training/training_dynamic/train_*_ane
+training/training_dynamic/sweep_results.txt

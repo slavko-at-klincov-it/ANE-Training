@@ -42,6 +42,38 @@
 
 ---
 
+## Anwendungsfälle
+
+> Der ANE ist ein **dedizierter Chip, der auf jedem Mac brachliegt**. Dieses Projekt nutzt ihn — kontinuierliches Lernen im Hintergrund, während GPU, CPU und Akku frei bleiben.
+
+| Anwendungsfall | Was passiert |
+|:---|:---|
+| **Kontinuierliches Lernen** | Die ANE trainiert nebenbei auf deinen Tagesdaten (Code, Docs, E-Mails) während du arbeitest. Deine persönliche KI wird jeden Tag schlauer — ohne dass du es merkst. |
+| **Overnight Fine-Tuning** | Vor dem Schlafen starten, MacBook lädt, ANE trainiert. Morgens: dein Modell kennt deine Codebase, deinen Schreibstil, deine Muster. |
+| **100% Privat** | Daten verlassen nie dein Gerät. Keine Cloud, keine API-Calls, kein Account. Alles bleibt auf deinem Mac. |
+| **Zero Impact** | GPU rendert, CPU kompiliert, ANE trainiert. Kein Akkuverbrauch, kein Lüfter, keine Verlangsamung. Dadurch dass die ANE arbeitet, schränkt es weder CPU noch GPU ein. |
+
+**Durchsatz** (Tiny-ANE 13M, M3 Pro): `12.6 Steps/Sek` · `11.5M Tokens/Stunde` · `92M Tokens über Nacht (8h)`
+
+<details>
+<summary><b>Wofür das NICHT gedacht ist</b></summary>
+
+&nbsp;
+
+- **Pre-Training großer LLMs** — ANE Peak ist 2.15 TFLOPS reales Training. Ein 7B-Modell würde Wochen dauern.
+- **Bildgenerierung** — Diffusion-Modelle brauchen GPU-Level Durchsatz und VRAM.
+- **Alles >1B Parameter** — Der 32MB SRAM und die FP16-Pipeline des ANE sind für kleine, fokussierte Modelle designed.
+- **Die GPU schlagen** — MLX/Metal ist schneller. Der Vorteil des ANE: er läuft *neben* der GPU, nicht stattdessen.
+
+Für den richtigen Workload (kleine Modelle, kontinuierliches Lernen, Background Fine-Tuning) ist der ANE einzigartig nützlich — weil er der einzige Beschleuniger auf deinem Mac ist, der nichts zu tun hat.
+
+</details>
+
+> [!TIP]
+> Detaillierte Durchsatzberechnungen, konkrete Beispiele und ein Vergleich ANE vs MLX vs Cloud: **[docs/ANE_USE_CASES.md](docs/ANE_USE_CASES.md)**
+
+---
+
 <table>
 <tr>
 <td width="50%">
@@ -705,6 +737,7 @@ ANE-Training/
 │   └── Makefile
 │
 ├── docs/ ······························ Forschungsdokumentation
+│   ├── ANE_USE_CASES.md                Anwendungsfälle, Durchsatz, Continuous Learning Vision
 │   ├── ANE_MONITORING.md               Thermal, Device Info, was messbar ist
 │   ├── ANE_PERFORMANCE_TUNING.md       Sweep-Ergebnisse, optimale Parameter
 │   ├── ANE_COMPILER_OPTIONS.md         Runtime Option Keys
