@@ -23,18 +23,23 @@
 
 <br>
 
-> The first standalone C API (`libane`) for Apple's private Neural Engine. Enables **training** directly on the ANE — Apple officially restricts it to inference via CoreML. Complete hardware research, runnable demos, benchmark suite.
+> Train AI models on the Neural Engine — **while your GPU stays free for other work.**
+>
+> The first standalone C API (`libane`) for Apple's private Neural Engine. Apple restricts the ANE to inference via CoreML. This project unlocks **training** — running in the background on a dedicated chip that doesn't block your GPU, CPU, or battery.
 
 > [!IMPORTANT]
+> **The goal is not to beat the GPU on throughput.** MLX/Metal is faster for pure training. The goal is to use the ANE as a **dedicated, independent training accelerator** — so you can train a model while editing video, rendering 3D, or gaming. No competition for GPU resources.
+>
 > **This IS:**
 > - Direct access to Apple's **private ANE API** (76 classes discovered, 35 exposed via libane)
-> - **FP16 native compute** on the Neural Engine hardware — 12.8 TFLOPS peak (2.15 TFLOPS real training)
+> - **Background training** on a dedicated chip — GPU, CPU, and battery stay free
+> - **FP16 native compute** — 12.8 TFLOPS ANE peak, 2.15 TFLOPS real training throughput
 > - **1 compile → unlimited training steps** via Dynamic Spatial Packing
 >
 > **This is NOT:**
+> - A GPU competitor — MLX is faster for throughput, we're faster at staying out of the way
 > - CoreML / Metal / MLX — we bypass Apple's public frameworks entirely
-> - CPU training (cblas/NEON/AMX) — compute runs on the Neural Engine, not the CPU
-> - GPU training — the ANE runs **independently**, your GPU stays free for other work
+> - CPU training — forward/backward runs on the Neural Engine, not on your CPU cores
 
 ---
 

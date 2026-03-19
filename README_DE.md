@@ -22,18 +22,23 @@
 
 <br>
 
-> Die erste eigenständige C-API (`libane`) für Apples privaten Neural Engine. Ermöglicht **Training** direkt auf dem ANE — Apple beschränkt ihn offiziell auf Inference via CoreML. Vollständige Hardware-Forschung, lauffähige Demos, Benchmark-Suite.
+> Trainiere KI-Modelle auf der Neural Engine — **während deine GPU frei bleibt für andere Arbeit.**
+>
+> Die erste eigenständige C-API (`libane`) für Apples privaten Neural Engine. Apple beschränkt den ANE auf Inference via CoreML. Dieses Projekt schaltet **Training** frei — läuft im Hintergrund auf einem dedizierten Chip, der weder GPU noch CPU noch Akku belastet.
 
 > [!IMPORTANT]
+> **Das Ziel ist nicht, die GPU im Durchsatz zu schlagen.** MLX/Metal ist schneller für reines Training. Das Ziel ist, den ANE als **dedizierten, unabhängigen Training-Beschleuniger** zu nutzen — damit du ein Modell trainieren kannst während du Video schneidest, 3D renderst oder spielst. Keine Konkurrenz um GPU-Ressourcen.
+>
 > **Das IST:**
 > - Direkter Zugriff auf Apples **private ANE-API** (76 Klassen entdeckt, 35 via libane exponiert)
-> - **FP16 native Compute** auf der Neural Engine Hardware — 12.8 TFLOPS Peak (2.15 TFLOPS reales Training)
+> - **Background-Training** auf einem dedizierten Chip — GPU, CPU und Akku bleiben frei
+> - **FP16 native Compute** — 12.8 TFLOPS ANE Peak, 2.15 TFLOPS realer Training-Durchsatz
 > - **1 Compile → unbegrenzte Training-Steps** via Dynamic Spatial Packing
 >
 > **Das ist NICHT:**
+> - Ein GPU-Konkurrent — MLX ist schneller im Durchsatz, wir sind schneller darin nicht im Weg zu sein
 > - CoreML / Metal / MLX — wir umgehen Apples öffentliche Frameworks komplett
-> - CPU-Training (cblas/NEON/AMX) — Compute läuft auf der Neural Engine, nicht der CPU
-> - GPU-Training — der ANE läuft **unabhängig**, deine GPU bleibt frei für andere Arbeit
+> - CPU-Training — Forward/Backward läuft auf der Neural Engine, nicht auf deinen CPU-Cores
 
 ---
 
