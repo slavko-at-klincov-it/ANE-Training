@@ -139,7 +139,7 @@ Interactive menu — builds everything automatically.
 
 ```bash
 ./ane                # Interactive menu
-./ane bench          # ⚡ Run this first! Auto-tunes + benchmarks for YOUR chip
+./ane bench          # Measure your ANE silicon peak
 ./ane train          # Training demo (Y=2X, 1 compile, 60 steps)
 ./ane generate       # Shakespeare text generation on ANE
 ./ane explore        # Explore 35 ANE classes interactively

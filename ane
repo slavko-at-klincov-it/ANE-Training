@@ -193,23 +193,6 @@ profile_fresh() {
     [ "$age" -lt 604800 ]  # 7 days
 }
 
-# Check if system has been benchmarked (tuned profile exists)
-is_tuned() {
-    [ -f "$PROFILE" ] && grep -q '^tuned_ch=' "$PROFILE" 2>/dev/null
-}
-
-# Check if benchmark has been run at all
-is_benchmarked() {
-    [ -f "$PROFILE" ] && grep -q '^peak_tflops=' "$PROFILE" 2>/dev/null
-}
-
-# Show "benchmark required" message for locked options
-require_benchmark() {
-    echo ""
-    fail "$(t "Benchmark required first! This optimizes the ANE for your chip." "Benchmark nötig! Damit wird der ANE für deinen Chip optimiert.")"
-    info "$(t "Select option 2 (Benchmark) to set up your system." "Wähle Option 2 (Benchmark) um dein System einzurichten.")"
-    echo ""
-}
 
 # ===== Colors =====
 R='\033[0;31m'
@@ -320,16 +303,11 @@ cmd_bench() {
     check_system
     ensure_built "bench_bin" "bench"
     echo ""
-    echo -e "  ${BOLD}$(t "Step 1: Auto-tuning for your chip ..." "Schritt 1: Auto-Tuning für deinen Chip ...")${NC}"
-    echo -e "  ${D}$(t "Finding the optimal kernel shapes (~2 min) ..." "Finde optimale Kernel-Shapes (~2 Min) ...")${NC}"
-    echo ""
-    "$EXAMPLES/bench" --tune --save-profile="$PROFILE"
+    "$EXAMPLES/bench" --save-profile="$PROFILE"
     if [ -f "$PROFILE" ]; then
-        ok "$(t "System optimized and profile saved" "System optimiert und Profil gespeichert")"
+        ok "$(t "Profile saved" "Profil gespeichert")"
         create_device_profile >/dev/null
         ok "$(t "Device profile: $DEVICE_PROFILE" "Geräteprofil: $DEVICE_PROFILE")"
-        echo ""
-        ok "$(t "All features unlocked! You can now use all menu options." "Alle Funktionen freigeschaltet! Du kannst jetzt alle Menü-Optionen nutzen.")"
     fi
     echo ""
 }
@@ -473,7 +451,7 @@ cmd_help() {
     echo -e "    ${C}./ane${NC}              $(t "Interactive menu" "Interaktives Menü")"
     echo -e "    ${C}./ane about${NC}        $(t "What is this? Why ANE training?" "Was ist das? Warum ANE-Training?")"
     echo -e "    ${C}./ane train${NC}        $(t "Training Demo (Y=2X, Dynamic Spatial Packing)" "Training Demo (Y=2X, Dynamic Spatial Packing)")"
-    echo -e "    ${C}./ane bench${NC}        $(t "Auto-tune + benchmark (required on first run)" "Auto-Tune + Benchmark (beim ersten Start nötig)")"
+    echo -e "    ${C}./ane bench${NC}        $(t "Measure your ANE silicon peak" "ANE Silizium-Peak messen")"
     echo -e "    ${C}./ane generate${NC}     $(t "Shakespeare text generation on ANE" "Shakespeare Text-Generation auf ANE")"
     echo -e "    ${C}./ane explore${NC}      $(t "ANE Framework Explorer (35 classes)" "ANE Framework Explorer (35 Klassen)")"
     echo -e "    ${C}./ane info${NC}         $(t "Hardware Info" "Hardware-Erkennung")"
@@ -559,39 +537,16 @@ cmd_menu() {
     fi
 
     while true; do
-        local _tuned=false
-        is_benchmarked && _tuned=true
-
         echo ""
         echo -e "  ${D}─────────────────────────────────────${NC}"
-
-        if [ "$_tuned" = "false" ]; then
-            echo ""
-            echo -e "  ${Y}$(t "⚡ First time? Run Benchmark (2) to optimize for your chip." "⚡ Erstes Mal? Starte Benchmark (2) um für deinen Chip zu optimieren.")${NC}"
-        fi
-
         echo ""
-        if [ "$_tuned" = "true" ]; then
-            echo -e "    ${W}1${NC}  Training Demo       ${D}$(t "Train Y=2X, 1 compile, 60 steps" "Train Y=2X, 1 Compile, 60 Steps")${NC}"
-        else
-            echo -e "    ${D}1  Training Demo       $(t "🔒 Benchmark first" "🔒 Erst Benchmark")${NC}"
-        fi
-        echo -e "    ${W}2${NC}  Benchmark            ${D}$(t "Auto-tune + measure your ANE" "Auto-Tune + ANE messen")${NC}"
-        if [ "$_tuned" = "true" ]; then
-            echo -e "    ${W}3${NC}  Text Generation      ${D}$(t "Shakespeare on the ANE" "Shakespeare auf dem ANE")${NC}"
-            echo -e "    ${W}4${NC}  ANE Explorer          ${D}$(t "Explore 35 private classes" "35 private Klassen erkunden")${NC}"
-        else
-            echo -e "    ${D}3  Text Generation      $(t "🔒 Benchmark first" "🔒 Erst Benchmark")${NC}"
-            echo -e "    ${D}4  ANE Explorer          $(t "🔒 Benchmark first" "🔒 Erst Benchmark")${NC}"
-        fi
+        echo -e "    ${W}1${NC}  Training Demo       ${D}$(t "Train Y=2X, 1 compile, 60 steps" "Train Y=2X, 1 Compile, 60 Steps")${NC}"
+        echo -e "    ${W}2${NC}  Benchmark            ${D}$(t "Measure your ANE silicon peak" "ANE Silizium-Peak messen")${NC}"
+        echo -e "    ${W}3${NC}  Text Generation      ${D}$(t "Shakespeare on the ANE" "Shakespeare auf dem ANE")${NC}"
+        echo -e "    ${W}4${NC}  ANE Explorer          ${D}$(t "Explore 35 private classes" "35 private Klassen erkunden")${NC}"
         echo -e "    ${W}5${NC}  $(t "Hardware Info" "Hardware Info")         ${D}$(t "Chip, cores, API status" "Chip, Cores, API-Status")${NC}"
-        if [ "$_tuned" = "true" ]; then
-            echo -e "    ${W}6${NC}  $(t "libane Test Suite" "libane Tests")          ${D}$(t "Run the test suite" "Test-Suite laufen lassen")${NC}"
-            echo -e "    ${W}7${NC}  ANE Monitor            ${D}$(t "Deep probe: thermal, device info, sustained" "Deep Probe: Thermal, Device Info, Sustained")${NC}"
-        else
-            echo -e "    ${D}6  $(t "libane Test Suite" "libane Tests")          $(t "🔒 Benchmark first" "🔒 Erst Benchmark")${NC}"
-            echo -e "    ${D}7  ANE Monitor            $(t "🔒 Benchmark first" "🔒 Erst Benchmark")${NC}"
-        fi
+        echo -e "    ${W}6${NC}  $(t "libane Test Suite" "libane Tests")          ${D}$(t "Run the test suite" "Test-Suite laufen lassen")${NC}"
+        echo -e "    ${W}7${NC}  ANE Monitor            ${D}$(t "Deep probe: thermal, device info, sustained" "Deep Probe: Thermal, Device Info, Sustained")${NC}"
         echo ""
         echo -e "    ${W}?${NC}  $(t "What is this?" "Was ist das?")           ${D}$(t "Why ANE training? Key differentiators." "Warum ANE-Training? USP.")${NC}"
         echo -e "    ${W}d${NC}  $(t "Documentation" "Dokumentation")         ${D}$(t "Open README in browser" "README im Browser öffnen")${NC}"
@@ -602,13 +557,13 @@ cmd_menu() {
         read -r choice
 
         case "$choice" in
-            1) if [ "$_tuned" = "true" ]; then cmd_train; else require_benchmark; fi ;;
+            1) cmd_train ;;
             2) cmd_bench ;;
-            3) if [ "$_tuned" = "true" ]; then cmd_generate; else require_benchmark; fi ;;
-            4) if [ "$_tuned" = "true" ]; then cmd_explore; else require_benchmark; fi ;;
+            3) cmd_generate ;;
+            4) cmd_explore ;;
             5) cmd_info ;;
-            6) if [ "$_tuned" = "true" ]; then cmd_test; else require_benchmark; fi ;;
-            7) if [ "$_tuned" = "true" ]; then cmd_monitor; else require_benchmark; fi ;;
+            6) cmd_test ;;
+            7) cmd_monitor ;;
             '?'|about) cmd_about ;;
             d|D)
                 if [ -f "$DIR/README.md" ]; then
