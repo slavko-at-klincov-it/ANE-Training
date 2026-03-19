@@ -39,8 +39,6 @@ examples/explore
 
 # Compiled binaries — libane
 libane/test_ane
-libane/test_gpu
-libane/libane_gpu.dylib
 
 # Compiled binaries — training (exclude source, block executables)
 training/train
@@ -65,3 +63,4 @@ training/test_ane_advanced
 libane/bench_gpu
 training/bench_model_sizes
 training/test_dw_ane
+libane/test_gpu

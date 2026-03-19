@@ -34,7 +34,7 @@
 > **This is NOT:**
 > - CoreML / Metal / MLX — we bypass Apple's public frameworks entirely
 > - CPU training (cblas/NEON/AMX) — compute runs on the Neural Engine, not the CPU
-> - GPU training — the ANE is a separate accelerator with its own 32 MB SRAM
+> - GPU training — the ANE runs **independently**, your GPU stays free for other work
 
 ---
 
@@ -711,9 +711,7 @@ ANE-Training/
 ├── libane/ ···························· Core C API
 │   ├── ane.h                            ANE API (compile, eval, thermal, SRAM spill)
 │   ├── ane.m                            Implementation + Version Detection
-│   ├── ane_gpu.h                        Optional Metal GPU API (matmul, sync)
-│   ├── ane_gpu.m                        Metal loaded via dlopen at runtime
-│   ├── test_ane.c / test_gpu.c          Test Suites
+│   ├── test_ane.c                       Test Suite
 │   └── Makefile
 │
 └── assets/ ···························· Model Assets
