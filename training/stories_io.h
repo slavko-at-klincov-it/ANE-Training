@@ -128,7 +128,12 @@ static void free_kern(Kern *k) {
     CFRelease(k->model); CFRelease(k->request); CFRelease(k->tmpDir);
     free(k);
 }
+static int g_ane_eval_errs = 0;
 static void ane_eval(Kern *k) {
     id mdl = (__bridge id)k->model; id req = (__bridge id)k->request; NSError *e = nil;
-    ((BOOL(*)(id,SEL,unsigned int,id,id,NSError**))objc_msgSend)(mdl, @selector(evaluateWithQoS:options:request:error:), 21, @{}, req, &e);
+    BOOL ok = ((BOOL(*)(id,SEL,unsigned int,id,id,NSError**))objc_msgSend)(mdl, @selector(evaluateWithQoS:options:request:error:), 21, @{}, req, &e);
+    if (!ok || e) {
+        if (g_ane_eval_errs < 5) printf("  ANE EVAL ERROR: ok=%d err=%s\n", ok, e ? [[e description] UTF8String] : "nil");
+        g_ane_eval_errs++;
+    }
 }

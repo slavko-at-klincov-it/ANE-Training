@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "../../libane/ane.h"
+#include "../libane/ane.h"
 
 #define MAX_RESULTS 256
 

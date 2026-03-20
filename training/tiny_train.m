@@ -242,6 +242,12 @@ int main(int argc, char *argv[]) {
         int start_step = 0;
         bool resuming = false;
 
+        // Parse CLI args: --lr=<val> --steps=<val>
+        for (int i = 1; i < argc; i++) {
+            if (strncmp(argv[i], "--lr=", 5) == 0) lr = atof(argv[i] + 5);
+            else if (strncmp(argv[i], "--steps=", 8) == 0) total_steps = atoi(argv[i] + 8);
+        }
+
         float *W1 = (float*)malloc(H * D * sizeof(float));
         float *W2 = (float*)malloc(D * H * sizeof(float));
 

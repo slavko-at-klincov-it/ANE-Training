@@ -19,6 +19,9 @@ train_large_ane: train_large_ane.m $(HEADERS_ANE)
 train_pipeline: train_pipeline.m $(HEADERS_ANE)
 	$(CC) $(CFLAGS) -o $@ train_pipeline.m $(LDFLAGS) -framework Accelerate
 
+tiny_train: tiny_train.m
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+
 PROBES = test_weight_reload test_perf_stats test_qos_sweep test_ane_advanced
 
 test_rmsnorm_bwd: test_rmsnorm_bwd.m $(HEADERS_ANE)
@@ -72,8 +75,27 @@ test_analytics_direct: test_analytics_direct.m
 test_analytics_plist: test_analytics_plist.m
 	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
 
+test_ffn_bwd_debug: test_ffn_bwd_debug.m
+	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) -framework Accelerate
+
 test_dw_ane: test_dw_ane.m ../libane/ane.m ../libane/ane.h
 	$(CC) $(CFLAGS) -o $@ test_dw_ane.m ../libane/ane.m $(LDFLAGS) -framework Accelerate
+
+# ===== Sweep Benchmarks (C, linked against libane) =====
+SWEEP_CFLAGS = -O2 -Wall -Wno-deprecated-declarations -fobjc-arc
+SWEEP_LDFLAGS = -framework Foundation -framework IOSurface -ldl -lm
+LIBANE = ../libane/ane.m
+
+sweep_single: sweep_single.c ../libane/ane.h $(LIBANE)
+	$(CC) $(SWEEP_CFLAGS) -o $@ $< $(LIBANE) $(SWEEP_LDFLAGS)
+
+sweep_stacked: sweep_stacked.c ../libane/ane.h $(LIBANE)
+	$(CC) $(SWEEP_CFLAGS) -o $@ $< $(LIBANE) $(SWEEP_LDFLAGS)
+
+sweep_training: sweep_training.c ../libane/ane.h $(LIBANE)
+	$(CC) $(SWEEP_CFLAGS) -o $@ $< $(LIBANE) $(SWEEP_LDFLAGS)
+
+sweeps: sweep_single sweep_stacked sweep_training
 
 probes: $(PROBES)
 
@@ -81,7 +103,7 @@ tokenize:
 	python3 tokenize.py
 
 clean:
-	rm -f train train_large train_large_ane train_pipeline $(PROBES) test_rmsnorm_bwd test_classifier test_dw_ane
+	rm -f train train_large train_large_ane train_pipeline tiny_train $(PROBES) test_rmsnorm_bwd test_classifier test_dw_ane sweep_single sweep_stacked sweep_training
 
-.PHONY: clean tokenize probes
+.PHONY: clean tokenize probes sweeps
 

@@ -25,7 +25,7 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
-#include "../../libane/ane.h"
+#include "../libane/ane.h"
 
 // ===== Sweep grid =====
 static const int CH_IN[]  = {256, 384, 448, 512, 640, 768, 1024, 1536, 2048, 3072, 4096};

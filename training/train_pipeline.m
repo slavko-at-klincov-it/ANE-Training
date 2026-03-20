@@ -33,6 +33,8 @@
 #include "ane_rmsnorm_bwd.h"
 #include "ane_classifier.h"
 
+#define LOSS_SCALE 1024.0f
+
 #define CKPT_PATH_DEFAULT "ane_pipeline_ckpt.bin"
 #define MODEL_PATH_DEFAULT "stories110M.bin"
 #define DATA_PATH_DEFAULT "tinystories_data00.bin"
@@ -349,6 +351,10 @@ static float pipeline_forward(
         dlogits[tgt*SEQ+t] -= 1.0f;
     }
     vDSP_vsmul(dlogits, 1, &invS, dlogits, 1, (vDSP_Length)((size_t)VOCAB*SEQ));
+
+    // Loss scaling: scale up gradients to prevent fp16 underflow in ANE backward passes
+    float ls = LOSS_SCALE;
+    vDSP_vsmul(dlogits, 1, &ls, dlogits, 1, (vDSP_Length)((size_t)VOCAB*SEQ));
     t1 = mach_absolute_time(); *t_elem += tb_ms(t1-t0);
 
     return total_loss / SEQ;
@@ -937,9 +943,10 @@ int main(int argc, char *argv[]) {
 
             dispatch_group_wait(dw_grp, DISPATCH_TIME_FOREVER);
 
-            // Adam update (same as train_large_ane.m)
-            float gsc = 1.0f / steps_batch;
+            // Adam update — unscale gradients by LOSS_SCALE before applying
+            float gsc = 1.0f / (steps_batch * LOSS_SCALE);
             adam_t++;
+
             for (int L=0; L<NLAYERS; L++) {
                 LayerGrads *g = &grads[L];
                 for(size_t i=0;i<WQ_SZ;i++){g->Wq[i]*=gsc;g->Wk[i]*=gsc;g->Wv[i]*=gsc;g->Wo[i]*=gsc;}
