@@ -1,0 +1,2380 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ANE Training Platform</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg-deep: #06060c;
+  --bg-base: #0a0a12;
+  --bg-surface: #10101c;
+  --bg-card: #161625;
+  --bg-card-hover: #1c1c30;
+  --bg-elevated: #1e1e32;
+  --border: #1e1e35;
+  --border-subtle: #14142a;
+  --border-active: #2a2a50;
+  --text: #e8e8f0;
+  --text-secondary: #8888a0;
+  --text-muted: #555570;
+  --text-dim: #3a3a55;
+  --blue: #0A84FF;
+  --blue-dim: #0A84FF33;
+  --blue-glow: #0A84FF18;
+  --green: #30D158;
+  --green-dim: #30D15833;
+  --amber: #FFD60A;
+  --amber-dim: #FFD60A33;
+  --red: #FF453A;
+  --red-dim: #FF453A33;
+  --cyan: #64D2FF;
+  --purple: #BF5AF2;
+  --mono: "SF Mono", "Fira Code", "Cascadia Code", "JetBrains Mono", Menlo, Monaco, "Courier New", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  --sidebar-w: 220px;
+  --header-h: 56px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --terminal-bg: #0c0c14;
+  --terminal-scanline: rgba(0,0,0,0.03);
+}
+
+/* ═══════════════════ LIGHT THEME ═══════════════════ */
+html[data-theme="light"] {
+  --bg-deep: #f2f2f7;
+  --bg-base: #ffffff;
+  --bg-surface: #f5f5fa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f0f8;
+  --bg-elevated: #eaeaf2;
+  --border: #d8d8e0;
+  --border-subtle: #e8e8f0;
+  --border-active: #c0c0d0;
+  --text: #1a1a2e;
+  --text-secondary: #555570;
+  --text-muted: #8888a0;
+  --text-dim: #aaaabc;
+  --blue: #0071e3;
+  --blue-dim: #0071e322;
+  --blue-glow: #0071e312;
+  --green: #248a3d;
+  --green-dim: #248a3d22;
+  --amber: #c08800;
+  --amber-dim: #c0880022;
+  --red: #d70015;
+  --red-dim: #d7001522;
+  --cyan: #0071a4;
+  --purple: #9230c2;
+  --terminal-bg: #1a1a2e;
+  --terminal-scanline: rgba(0,0,0,0.02);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  font-size: 14px; scroll-behavior: smooth; color-scheme: dark light;
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+body, .sidebar, .header, .card, .stat-mini, .terminal,
+.nav-item, .search-input, .thermal-pill, .lang-toggle,
+.lang-btn, .feature-card, .locked-note, .bar-fill,
+.bg-surface, .insight-box, .phase-step, .class-item,
+.class-methods, .btn-secondary, .progress-bar {
+  transition: background-color 0.5s ease, border-color 0.5s ease, color 0.5s ease, box-shadow 0.5s ease;
+}
+.card::before, .card-glow::before {
+  transition: background 0.5s ease, opacity 0.5s ease;
+}
+.gauge-fill { transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease; }
+.thermal-dot { transition: background-color 0.5s ease; }
+.text, .stat-value, .stat-label, .metric-big, .card-title,
+.page-title, .logo-text, .logo-sub, .nav-num, .sidebar-footer {
+  transition: color 0.5s ease;
+}
+html[data-theme="light"] { color-scheme: light; }
+body {
+  font-family: var(--sans);
+  background: var(--bg-deep);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════════════════════════ */
+.app { display: flex; height: 100vh; }
+.sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--bg-base);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  z-index: 10;
+}
+.main {
+  flex: 1; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.header {
+  height: var(--header-h); min-height: var(--header-h);
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+}
+.content {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 28px;
+  background: var(--bg-deep);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR
+   ═══════════════════════════════════════════════════════════════ */
+.sidebar-logo {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-text {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--text);
+  line-height: 1;
+}
+.logo-text span { color: var(--blue); }
+.logo-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+.sidebar-nav {
+  flex: 1; padding: 12px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+  user-select: none;
+  border: 1px solid transparent;
+}
+.nav-item:hover {
+  background: var(--bg-surface);
+  color: var(--text);
+}
+.nav-item.active {
+  background: var(--blue-dim);
+  color: var(--blue);
+  border-color: #0A84FF22;
+}
+.nav-item .nav-icon {
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  opacity: 0.7;
+}
+.nav-item.active .nav-icon { opacity: 1; }
+.nav-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  min-width: 14px;
+}
+.nav-item.active .nav-num { color: var(--blue); opacity: 0.6; }
+.sidebar-footer {
+  padding: 14px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════ */
+.header-left {
+  display: flex; align-items: center; gap: 16px;
+}
+.page-title {
+  font-size: 15px; font-weight: 600;
+  letter-spacing: -0.2px;
+}
+.header-right {
+  display: flex; align-items: center; gap: 16px;
+}
+.thermal-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 12px 4px 8px;
+  background: var(--green-dim);
+  border: 1px solid #30D15830;
+  border-radius: 20px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--green);
+}
+.thermal-dot {
+  width: 7px; height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 #30D15866; }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px #30D15800; }
+}
+.lang-toggle {
+  display: flex; border-radius: var(--radius-sm);
+  overflow: hidden; border: 1px solid var(--border);
+}
+.lang-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  transition: all 0.15s;
+}
+.lang-btn.active {
+  background: var(--blue);
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGES
+   ═══════════════════════════════════════════════════════════════ */
+.page { display: none; animation: pageFadeIn 0.3s ease; }
+.page.active { display: block; }
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CARDS & GRID
+   ═══════════════════════════════════════════════════════════════ */
+.grid { display: grid; gap: 16px; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--blue-dim), transparent);
+}
+.card-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+.card-glow {
+  border-color: var(--blue-dim);
+}
+.card-glow::before {
+  background: linear-gradient(90deg, transparent, var(--blue), transparent);
+  opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   METRIC DISPLAYS
+   ═══════════════════════════════════════════════════════════════ */
+.metric-big {
+  font-family: var(--mono);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.metric-big .unit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+.metric-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.metric-row {
+  display: flex; align-items: baseline; gap: 6px;
+}
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.stat-item {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.stat-value {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.stat-mini {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  text-align: center;
+}
+.stat-mini .stat-value {
+  font-size: 20px;
+  margin-bottom: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GAUGES (SVG)
+   ═══════════════════════════════════════════════════════════════ */
+.gauge-container {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+}
+.gauge-svg {
+  transform: rotate(-90deg);
+}
+.gauge-bg {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 8;
+}
+.gauge-fill {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gauge-center-text {
+  position: absolute;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.gauge-wrapper {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BAR CHARTS
+   ═══════════════════════════════════════════════════════════════ */
+.bar-chart { display: flex; flex-direction: column; gap: 10px; }
+.bar-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.bar-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 110px;
+  text-align: right;
+}
+.bar-track {
+  flex: 1; height: 24px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  display: flex; align-items: center;
+  padding-left: 8px;
+}
+.bar-fill-value {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.bar-fill.blue { background: linear-gradient(90deg, var(--blue), #3da5ff); }
+.bar-fill.green { background: linear-gradient(90deg, var(--green), #5de07a); }
+.bar-fill.amber { background: linear-gradient(90deg, var(--amber), #ffe24d); }
+.bar-fill.optimal {
+  background: linear-gradient(90deg, var(--blue), #5cb8ff);
+  box-shadow: 0 0 12px var(--blue-dim);
+}
+.bar-fill.current {
+  background: linear-gradient(90deg, var(--green), #5de07a);
+  box-shadow: 0 0 12px var(--green-dim);
+}
+.bar-fill.dim { background: linear-gradient(90deg, var(--text-dim), var(--text-muted)); }
+html[data-theme="light"] .bar-fill.dim { background: linear-gradient(90deg, #c0c0d0, #a0a0b8); }
+html[data-theme="light"] .bar-fill-value { color: #fff; }
+html[data-theme="light"] .card::before { background: linear-gradient(90deg, transparent, var(--border), transparent); }
+html[data-theme="light"] .card-glow::before { background: linear-gradient(90deg, transparent, var(--blue), transparent); opacity: 0.3; }
+html[data-theme="light"] .sidebar { box-shadow: 1px 0 0 var(--border); }
+html[data-theme="light"] .header { box-shadow: 0 1px 0 var(--border); }
+
+/* Vertical bar chart */
+.vbar-chart {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 16px; height: 200px; padding-top: 20px;
+}
+.vbar-col {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 6px; flex: 1;
+}
+.vbar {
+  width: 100%; max-width: 48px;
+  border-radius: 4px 4px 0 0;
+  transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 4px;
+  position: relative;
+}
+.vbar-value {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+.vbar-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TABLES
+   ═══════════════════════════════════════════════════════════════ */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.data-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.data-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr.highlight td {
+  color: var(--blue);
+  background: var(--blue-glow);
+}
+.data-table tr.new-row {
+  animation: rowSlideIn 0.3s ease;
+}
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.info-table {
+  width: 100%;
+  font-size: 13px;
+}
+.info-table tr { border-bottom: 1px solid var(--border-subtle); }
+.info-table tr:last-child { border-bottom: none; }
+.info-table td {
+  padding: 9px 0;
+  vertical-align: top;
+}
+.info-table td:first-child {
+  color: var(--text-muted);
+  font-size: 12px;
+  width: 160px;
+  padding-right: 16px;
+}
+.info-table td:last-child {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  font-family: var(--sans);
+}
+.btn-primary {
+  background: var(--blue);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: #2196ff;
+  box-shadow: 0 0 20px var(--blue-dim);
+}
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover {
+  background: var(--bg-card-hover);
+  color: var(--text);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION HEADERS
+   ═══════════════════════════════════════════════════════════════ */
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 28px 0 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title:first-child { margin-top: 0; }
+.section-title::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: var(--border);
+}
+.section-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 2px 8px;
+  background: var(--bg-surface);
+  border-radius: 3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TRAINING PAGE
+   ═══════════════════════════════════════════════════════════════ */
+.training-config {
+  display: flex; gap: 24px; flex-wrap: wrap;
+}
+.config-item {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.config-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+.config-value {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+}
+.insight-box {
+  background: var(--blue-glow);
+  border: 1px solid var(--blue-dim);
+  border-left: 3px solid var(--blue);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--blue);
+  margin-top: 16px;
+}
+.chart-canvas {
+  width: 100%;
+  height: 200px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TEXT GENERATION - TERMINAL
+   ═══════════════════════════════════════════════════════════════ */
+.terminal {
+  background: var(--terminal-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--green);
+  min-height: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  position: relative;
+}
+.terminal::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    var(--terminal-scanline) 2px, var(--terminal-scanline) 4px
+  );
+  pointer-events: none;
+  border-radius: var(--radius);
+}
+.cursor-blink {
+  display: inline-block;
+  width: 8px; height: 16px;
+  background: var(--green);
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 1px;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANE EXPLORER
+   ═══════════════════════════════════════════════════════════════ */
+.search-input {
+  width: 100%;
+  padding: 10px 14px 10px 36px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--blue); }
+.search-wrapper {
+  position: relative; margin-bottom: 16px;
+}
+.search-icon {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+.class-group {
+  margin-bottom: 8px;
+}
+.class-group-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  padding: 8px 0 6px;
+  font-weight: 600;
+}
+.class-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+.class-item:hover {
+  background: var(--bg-surface);
+}
+.class-item.expanded {
+  background: var(--bg-surface);
+  border-color: var(--border);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.class-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--cyan);
+}
+.class-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.class-methods {
+  display: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 4px;
+}
+.class-methods.show { display: block; }
+.method-item {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 3px 0;
+}
+.method-item::before {
+  content: '- ';
+  color: var(--text-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BENCHMARK PHASES
+   ═══════════════════════════════════════════════════════════════ */
+.phase-stepper {
+  display: flex; gap: 2px; margin-bottom: 24px;
+}
+.phase-step {
+  flex: 1; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: background 0.4s;
+}
+.phase-step.done { background: var(--blue); }
+.phase-step.active {
+  background: var(--blue);
+  animation: phase-pulse 1s ease-in-out infinite;
+}
+@keyframes phase-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.phase-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.phase-content {
+  display: none;
+  animation: pageFadeIn 0.3s ease;
+}
+.phase-content.active { display: block; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MONITOR - THERMAL GAUGE
+   ═══════════════════════════════════════════════════════════════ */
+.thermal-gauge-large {
+  width: 180px; height: 180px;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.thermal-state-label {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 700;
+}
+.thermal-states {
+  display: flex; gap: 8px; margin-top: 12px;
+}
+.thermal-state-item {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--mono);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.thermal-state-item.active-green {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-dim);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ABOUT PAGE
+   ═══════════════════════════════════════════════════════════════ */
+.feature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.feature-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.feature-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.feature-card p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.compare-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border);
+  font-weight: 600;
+}
+.compare-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table .ane-col {
+  color: var(--blue);
+  font-weight: 600;
+}
+.compare-table .winner {
+  color: var(--green);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PROGRESS BAR
+   ═══════════════════════════════════════════════════════════════ */
+.progress-bar {
+  width: 100%; height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--blue);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOCKED OVERLAY
+   ═══════════════════════════════════════════════════════════════ */
+.locked-note {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.locked-note .lock-icon {
+  font-size: 16px;
+  opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════ */
+.animate-in {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.animate-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.stagger-1 { transition-delay: 0.05s; }
+.stagger-2 { transition-delay: 0.1s; }
+.stagger-3 { transition-delay: 0.15s; }
+.stagger-4 { transition-delay: 0.2s; }
+.stagger-5 { transition-delay: 0.25s; }
+.stagger-6 { transition-delay: 0.3s; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .feature-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ═══════════ SIDEBAR ═══════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text"><span>A</span>NE</div>
+      <div class="logo-sub">Apple Neural Engine<br>Training Platform</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+        <span class="nav-num">1</span>
+        <span data-i18n="nav_dashboard">Dashboard</span>
+      </div>
+      <div class="nav-item" data-page="training" onclick="navigateTo('training')">
+        <span class="nav-num">2</span>
+        <span data-i18n="nav_training">Training Demo</span>
+      </div>
+      <div class="nav-item" data-page="benchmark" onclick="navigateTo('benchmark')">
+        <span class="nav-num">3</span>
+        <span data-i18n="nav_benchmark">Benchmark</span>
+      </div>
+      <div class="nav-item" data-page="generate" onclick="navigateTo('generate')">
+        <span class="nav-num">4</span>
+        <span data-i18n="nav_generate">Text Generation</span>
+      </div>
+      <div class="nav-item" data-page="explorer" onclick="navigateTo('explorer')">
+        <span class="nav-num">5</span>
+        <span data-i18n="nav_explorer">ANE Explorer</span>
+      </div>
+      <div class="nav-item" data-page="hardware" onclick="navigateTo('hardware')">
+        <span class="nav-num">6</span>
+        <span data-i18n="nav_hardware">Hardware Info</span>
+      </div>
+      <div class="nav-item" data-page="monitor" onclick="navigateTo('monitor')">
+        <span class="nav-num">7</span>
+        <span data-i18n="nav_monitor">Monitor</span>
+      </div>
+      <div class="nav-item" data-page="about" onclick="navigateTo('about')">
+        <span class="nav-num">?</span>
+        <span data-i18n="nav_about">About</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      v1.0 &middot; by Klincov.it
+    </div>
+  </aside>
+
+  <!-- ═══════════ MAIN ═══════════ -->
+  <div class="main">
+    <header class="header">
+      <div class="header-left">
+        <span class="page-title" id="pageTitle">Dashboard</span>
+      </div>
+      <div class="header-right">
+        <div class="thermal-pill">
+          <div class="thermal-dot"></div>
+          <span data-i18n="thermal_nominal">Nominal</span>
+        </div>
+        <div class="lang-toggle">
+          <button class="lang-btn active" onclick="setTheme('dark')" id="theme-btn-dark">Dark</button>
+          <button class="lang-btn" onclick="setTheme('light')" id="theme-btn-light">Light</button>
+        </div>
+        <div class="lang-toggle">
+          <button class="lang-btn active" onclick="setLang('en')">EN</button>
+          <button class="lang-btn" onclick="setLang('de')">DE</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="content" id="content">
+
+      <!-- ═══════════════════════════════════════════════
+           PAGE: DASHBOARD
+           ═══════════════════════════════════════════════ -->
+      <div class="page active" id="page-dashboard">
+
+        <div class="grid grid-2" style="margin-bottom:16px">
+          <!-- Hardware Card -->
+          <div class="card animate-in stagger-1">
+            <div class="card-title" data-i18n="hw_title">Hardware</div>
+            <div class="stat-grid">
+              <div class="stat-item">
+                <span class="stat-label">Chip</span>
+                <span class="stat-value">M3 Pro</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label" data-i18n="arch">Architecture</span>
+                <span class="stat-value" style="color:var(--cyan)">h15g</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Cores</span>
+                <span class="stat-value">16</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">API</span>
+                <span class="stat-value">v1 <span style="color:var(--text-muted);font-size:12px">(35 classes)</span></span>
+              </div>
+            </div>
+          </div>
+          <!-- Performance Card -->
+          <div class="card card-glow animate-in stagger-2">
+            <div class="card-title" data-i18n="perf_title">Performance</div>
+            <div class="stat-grid">
+              <div class="stat-item">
+                <span class="stat-label" data-i18n="peak">Peak</span>
+                <span class="stat-value"><span class="count-up" data-target="12.79" data-decimals="2">0</span> <span style="color:var(--text-muted);font-size:12px">TFLOPS</span></span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label" data-i18n="sustained">Sustained</span>
+                <span class="stat-value"><span class="count-up" data-target="5.01" data-decimals="2">0</span> <span style="color:var(--text-muted);font-size:12px">TFLOPS</span></span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label" data-i18n="dispatch">Dispatch Overhead</span>
+                <span class="stat-value">0.25 <span style="color:var(--text-muted);font-size:12px">ms</span></span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label" data-i18n="efficiency">Efficiency</span>
+                <span class="stat-value" style="color:var(--green)"><span class="count-up" data-target="71" data-decimals="0">0</span>%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gauges -->
+        <div class="grid grid-2" style="margin-bottom:16px">
+          <div class="card animate-in stagger-3" style="display:flex;align-items:center;justify-content:space-around">
+            <div class="gauge-container">
+              <div class="gauge-wrapper">
+                <svg class="gauge-svg" width="140" height="140" viewBox="0 0 140 140">
+                  <circle class="gauge-bg" cx="70" cy="70" r="58"/>
+                  <circle class="gauge-fill" cx="70" cy="70" r="58" stroke="var(--blue)"
+                    stroke-dasharray="364.4" stroke-dashoffset="364.4" id="gauge-tflops"/>
+                </svg>
+                <div class="gauge-center-text" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column">
+                  <span style="font-family:var(--mono);font-size:24px;font-weight:700" id="gauge-tflops-val">0</span>
+                  <span style="font-size:10px;color:var(--text-muted)">TFLOPS</span>
+                </div>
+              </div>
+              <span style="font-size:11px;color:var(--text-secondary)" data-i18n="silicon_peak">Silicon Peak</span>
+            </div>
+            <div class="gauge-container">
+              <div class="gauge-wrapper">
+                <svg class="gauge-svg" width="140" height="140" viewBox="0 0 140 140">
+                  <circle class="gauge-bg" cx="70" cy="70" r="58"/>
+                  <circle class="gauge-fill" cx="70" cy="70" r="58" stroke="var(--green)"
+                    stroke-dasharray="364.4" stroke-dashoffset="364.4" id="gauge-eff"/>
+                </svg>
+                <div class="gauge-center-text" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column">
+                  <span style="font-family:var(--mono);font-size:24px;font-weight:700" id="gauge-eff-val">0</span>
+                  <span style="font-size:10px;color:var(--text-muted)" data-i18n="vs_spec">vs Apple Spec</span>
+                </div>
+              </div>
+              <span style="font-size:11px;color:var(--text-secondary)" data-i18n="efficiency">Efficiency</span>
+            </div>
+          </div>
+          <!-- Quick Stats -->
+          <div class="card animate-in stagger-4">
+            <div class="card-title" data-i18n="constraints">System Constraints</div>
+            <div class="grid grid-2" style="gap:10px">
+              <div class="stat-mini">
+                <div class="stat-value" style="color:var(--cyan)">32 <span style="font-size:12px;color:var(--text-muted)">MB</span></div>
+                <div class="stat-label">SRAM</div>
+              </div>
+              <div class="stat-mini">
+                <div class="stat-value" style="color:var(--amber)">119</div>
+                <div class="stat-label" data-i18n="compile_budget">Compile Budget</div>
+              </div>
+              <div class="stat-mini">
+                <div class="stat-value" style="color:var(--purple)">128</div>
+                <div class="stat-label">IOSurface Slots</div>
+              </div>
+              <div class="stat-mini">
+                <div class="stat-value" style="color:var(--green)">Nominal</div>
+                <div class="stat-label">Thermal</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- QoS Chart -->
+        <div class="section-title animate-in stagger-5" data-i18n="qos_title">QoS Performance Levels</div>
+        <div class="card animate-in stagger-5" style="margin-bottom:16px">
+          <div class="bar-chart" id="qos-chart">
+            <div class="bar-row">
+              <span class="bar-label">Background (9)</span>
+              <div class="bar-track"><div class="bar-fill optimal" data-width="100" style="width:0"><span class="bar-fill-value">12.79 TFLOPS</span></div></div>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">Utility (17)</span>
+              <div class="bar-track"><div class="bar-fill blue" data-width="87.6" style="width:0"><span class="bar-fill-value">11.20 TFLOPS</span></div></div>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">Default (21)</span>
+              <div class="bar-track"><div class="bar-fill blue" data-width="71.1" style="width:0"><span class="bar-fill-value">9.10 TFLOPS</span></div></div>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">User Inter. (33)</span>
+              <div class="bar-track"><div class="bar-fill dim" data-width="70.4" style="width:0"><span class="bar-fill-value">9.00 TFLOPS</span></div></div>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">User Init. (25)</span>
+              <div class="bar-track"><div class="bar-fill dim" data-width="57.1" style="width:0"><span class="bar-fill-value">7.30 TFLOPS</span></div></div>
+            </div>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:var(--text-muted);font-family:var(--mono)">
+            <span style="color:var(--blue)">&#9679;</span> Background (QoS 9) = <span data-i18n="optimal">Optimal</span> &mdash; <span data-i18n="qos_note">less OS scheduling interference</span>
+          </div>
+        </div>
+
+        <!-- Chip Comparison -->
+        <div class="section-title animate-in stagger-6" data-i18n="chip_compare">Chip Comparison</div>
+        <div class="card animate-in stagger-6">
+          <div class="vbar-chart" id="chip-chart">
+            <div class="vbar-col">
+              <div class="vbar-value">5.5</div>
+              <div class="vbar dim" data-height="34.8" style="height:0;background:linear-gradient(180deg,#444468,#333350)"></div>
+              <div class="vbar-label">M1</div>
+            </div>
+            <div class="vbar-col">
+              <div class="vbar-value">7.8</div>
+              <div class="vbar dim" data-height="49.4" style="height:0;background:linear-gradient(180deg,#444468,#333350)"></div>
+              <div class="vbar-label">M2</div>
+            </div>
+            <div class="vbar-col">
+              <div class="vbar-value">9.1</div>
+              <div class="vbar dim" data-height="57.6" style="height:0;background:linear-gradient(180deg,#444468,#333350)"></div>
+              <div class="vbar-label">M2 Pro</div>
+            </div>
+            <div class="vbar-col">
+              <div class="vbar-value">8.2</div>
+              <div class="vbar dim" data-height="51.9" style="height:0;background:linear-gradient(180deg,#444468,#333350)"></div>
+              <div class="vbar-label">M3</div>
+            </div>
+            <div class="vbar-col">
+              <div class="vbar-value" style="color:var(--green)">12.79</div>
+              <div class="vbar current" data-height="81.0" style="height:0;background:linear-gradient(180deg,var(--green),#1a8a3a)"></div>
+              <div class="vbar-label" style="color:var(--green);font-weight:600">M3 Pro</div>
+            </div>
+            <div class="vbar-col">
+              <div class="vbar-value">15.8</div>
+              <div class="vbar dim" data-height="100" style="height:0;background:linear-gradient(180deg,#555580,#444468)"></div>
+              <div class="vbar-label">M4</div>
+            </div>
+          </div>
+          <div style="text-align:center;margin-top:10px;font-size:10px;color:var(--text-dim);font-family:var(--mono)">TFLOPS (fp16) &mdash; 128x stacked conv benchmark</div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════
+           PAGE: TRAINING
+           ═══════════════════════════════════════════════ -->
+      <div class="page" id="page-training">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" data-i18n="train_config">Configuration</div>
+          <div class="training-config">
+            <div class="config-item">
+              <span class="config-label" data-i18n="model">Model</span>
+              <span class="config-value">Y = 2X (Linear)</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label" data-i18n="compile_status">Compile</span>
+              <span class="config-value" style="color:var(--green)" data-i18n="compiled_once">Compiled once &mdash; Dynamic Spatial Packing</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">Steps</span>
+              <span class="config-value">60</span>
+            </div>
+            <div class="config-item">
+              <span class="config-label">QoS</span>
+              <span class="config-value">Background (9)</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <button class="btn btn-primary" id="btn-train" onclick="startTraining()">
+            <span data-i18n="start_training">Start Training</span>
+          </button>
+          <span id="train-status" style="font-family:var(--mono);font-size:12px;color:var(--text-muted)"></span>
+        </div>
+
+        <div class="grid grid-2" style="margin-bottom:16px">
+          <div class="card">
+            <div class="card-title" data-i18n="loss_curve">Loss Curve</div>
+            <canvas class="chart-canvas" id="loss-chart"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-title" data-i18n="weight_conv">Weight Convergence</div>
+            <canvas class="chart-canvas" id="weight-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title" data-i18n="train_log">Training Log</div>
+          <div style="max-height:300px;overflow-y:auto">
+            <table class="data-table" id="train-table">
+              <thead>
+                <tr>
+                  <th>Step</th>
+                  <th>Loss</th>
+                  <th>W[0,0]</th>
+                  <th>W[1,1]</th>
+                  <th>ms/step</th>
+                </tr>
+              </thead>
+              <tbody id="train-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="insight-box">
+          <strong data-i18n="key_insight">Key Insight:</strong>
+          <span data-i18n="insight_text">1 compile, unlimited steps &mdash; Dynamic Spatial Packing bypasses ANE's ~119 compile limit by encoding weights as IOSurface inputs.</span>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════
+           PAGE: BENCHMARK
+           ═══════════════════════════════════════════════ -->
+      <div class="page" id="page-benchmark">
+        <div class="phase-stepper" id="phase-stepper">
+          <div class="phase-step" data-phase="1"></div>
+          <div class="phase-step" data-phase="2"></div>
+          <div class="phase-step" data-phase="3"></div>
+          <div class="phase-step" data-phase="4"></div>
+          <div class="phase-step" data-phase="5"></div>
+          <div class="phase-step" data-phase="6"></div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <button class="btn btn-primary" id="btn-bench" onclick="startBenchmark()">
+            <span data-i18n="run_bench">Run Benchmark</span>
+          </button>
+          <span id="bench-status" style="font-family:var(--mono);font-size:12px;color:var(--text-muted)"></span>
+        </div>
+
+        <!-- Phase 1 -->
+        <div class="phase-content active" id="bench-phase-1">
+          <div class="card">
+            <div class="card-title">Phase 1 &mdash; <span data-i18n="kernel_sweep">Single Conv Sweep</span></div>
+            <table class="data-table" id="kernel-table">
+              <thead>
+                <tr><th data-i18n="shape">Shape</th><th>Channels</th><th>Spatial</th><th>GFLOP</th><th data-i18n="latency">Latency (ms)</th><th>TFLOPS</th></tr>
+              </thead>
+              <tbody id="kernel-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Phase 2 -->
+        <div class="phase-content" id="bench-phase-2">
+          <div class="card">
+            <div class="card-title">Phase 2 &mdash; <span data-i18n="stacked_conv">Stacked Conv (Amortized Dispatch)</span></div>
+            <table class="data-table" id="stacked-table">
+              <thead>
+                <tr><th>Depth</th><th>Channels</th><th>Spatial</th><th>GFLOP</th><th data-i18n="latency">Latency (ms)</th><th>TFLOPS</th></tr>
+              </thead>
+              <tbody id="stacked-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Phase 3 -->
+        <div class="phase-content" id="bench-phase-3">
+          <div class="card" style="text-align:center;padding:40px">
+            <div class="card-title" data-i18n="sustained_5s">Phase 3 &mdash; 5-Second Sustained Peak</div>
+            <div class="metric-big" style="font-size:56px;margin:20px 0">
+              <span id="sustained-val" class="count-up" data-target="5.01" data-decimals="2">0</span>
+              <span class="unit">TFLOPS</span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:40px;margin-top:16px">
+              <div><span style="font-size:11px;color:var(--text-muted)" data-i18n="evals">Evaluations</span><br><span style="font-family:var(--mono);font-size:18px">4,892</span></div>
+              <div><span style="font-size:11px;color:var(--text-muted)" data-i18n="avg_latency">Avg Latency</span><br><span style="font-family:var(--mono);font-size:18px">1.02 ms</span></div>
+              <div><span style="font-size:11px;color:var(--text-muted)">Thermal</span><br><span style="font-family:var(--mono);font-size:18px;color:var(--green)">Nominal</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 4 -->
+        <div class="phase-content" id="bench-phase-4">
+          <div class="card">
+            <div class="card-title">Phase 4 &mdash; QoS Sweep</div>
+            <div class="bar-chart" id="bench-qos-chart">
+              <div class="bar-row"><span class="bar-label">Background (9)</span><div class="bar-track"><div class="bar-fill optimal" data-width="100" style="width:0"><span class="bar-fill-value">12.79 TFLOPS</span></div></div></div>
+              <div class="bar-row"><span class="bar-label">Utility (17)</span><div class="bar-track"><div class="bar-fill blue" data-width="87.6" style="width:0"><span class="bar-fill-value">11.20 TFLOPS</span></div></div></div>
+              <div class="bar-row"><span class="bar-label">Default (21)</span><div class="bar-track"><div class="bar-fill blue" data-width="71.1" style="width:0"><span class="bar-fill-value">9.10 TFLOPS</span></div></div></div>
+              <div class="bar-row"><span class="bar-label">User Inter. (33)</span><div class="bar-track"><div class="bar-fill dim" data-width="70.4" style="width:0"><span class="bar-fill-value">9.00 TFLOPS</span></div></div></div>
+              <div class="bar-row"><span class="bar-label">User Init. (25)</span><div class="bar-track"><div class="bar-fill dim" data-width="57.1" style="width:0"><span class="bar-fill-value">7.30 TFLOPS</span></div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 5 -->
+        <div class="phase-content" id="bench-phase-5">
+          <div class="card">
+            <div class="card-title">Phase 5 &mdash; <span data-i18n="all_configs">All Configurations</span></div>
+            <div class="bar-chart" id="all-configs-chart"></div>
+          </div>
+        </div>
+
+        <!-- Phase 6 -->
+        <div class="phase-content" id="bench-phase-6">
+          <div class="card">
+            <div class="card-title">Phase 6 &mdash; <span data-i18n="chip_ref">Chip Reference</span></div>
+            <div class="vbar-chart" id="bench-chip-chart" style="height:220px">
+              <div class="vbar-col"><div class="vbar-value">5.5</div><div class="vbar" data-height="34.8" style="height:0;background:linear-gradient(180deg,#444468,#333350)"></div><div class="vbar-label">M1</div></div>
+              <div class="vbar-col"><div class="vbar-value">7.8</div><div class="vbar" data-height="49.4" style="height:0;background:linear-gradient(180deg,#444468,#333350)"></div><div class="vbar-label">M2</div></div>
+              <div class="vbar-col"><div class="vbar-value">9.1</div><div class="vbar" data-height="57.6" style="height:0;background:linear-gradient(180deg,#444468,#333350)"></div><div class="vbar-label">M2 Pro</div></div>
+              <div class="vbar-col"><div class="vbar-value">8.2</div><div class="vbar" data-height="51.9" style="height:0;background:linear-gradient(180deg,#444468,#333350)"></div><div class="vbar-label">M3</div></div>
+              <div class="vbar-col"><div class="vbar-value" style="color:var(--green)">12.79</div><div class="vbar" data-height="81.0" style="height:0;background:linear-gradient(180deg,var(--green),#1a8a3a)"></div><div class="vbar-label" style="color:var(--green);font-weight:600">M3 Pro</div></div>
+              <div class="vbar-col"><div class="vbar-value">15.8</div><div class="vbar" data-height="100" style="height:0;background:linear-gradient(180deg,#555580,#444468)"></div><div class="vbar-label">M4</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="section-title" style="margin-top:24px">Summary</div>
+        <div class="grid grid-3" id="bench-summary">
+          <div class="card" style="text-align:center">
+            <div class="card-title" data-i18n="peak">Peak</div>
+            <div class="metric-big">12.79<span class="unit">TFLOPS</span></div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="card-title" data-i18n="sustained">Sustained</div>
+            <div class="metric-big">5.01<span class="unit">TFLOPS</span></div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="card-title" data-i18n="efficiency">Efficiency</div>
+            <div class="metric-big" style="color:var(--green)">71<span class="unit">%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════
+           PAGE: TEXT GENERATION
+           ═══════════════════════════════════════════════ -->
+      <div class="page" id="page-generate">
+        <div class="grid grid-3" style="margin-bottom:16px">
+          <div class="card">
+            <div class="card-title" data-i18n="model">Model</div>
+            <div class="stat-value">Shakespeare Bigram</div>
+            <div class="stat-label" style="margin-top:4px" data-i18n="trained_ane">Trained on ANE</div>
+          </div>
+          <div class="card">
+            <div class="card-title" data-i18n="vocab">Vocabulary</div>
+            <div class="stat-value">64 <span style="font-size:12px;color:var(--text-muted)">chars</span></div>
+            <div class="stat-label" style="margin-top:4px">a-z A-Z 0-9 + punct</div>
+          </div>
+          <div class="card">
+            <div class="card-title" data-i18n="method">Method</div>
+            <div class="stat-value" style="color:var(--cyan)">Char-by-char</div>
+            <div class="stat-label" style="margin-top:4px" data-i18n="ane_inference">ANE inference</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <button class="btn btn-primary" id="btn-generate" onclick="startGeneration()">
+            <span data-i18n="generate">Generate</span>
+          </button>
+          <button class="btn btn-secondary" onclick="clearTerminal()">
+            <span data-i18n="clear">Clear</span>
+          </button>
+        </div>
+
+        <div class="terminal" id="terminal">
+          <span id="terminal-text"></span><span class="cursor-blink" id="cursor"></span>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════
+           PAGE: ANE EXPLORER
+           ═══════════════════════════════════════════════ -->
+      <div class="page" id="page-explorer">
+        <div class="grid grid-3" style="margin-bottom:16px">
+          <div class="card" style="text-align:center">
+            <div class="card-title" data-i18n="total_classes">Total Classes</div>
+            <div class="metric-big" style="color:var(--cyan)">35</div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="card-title" data-i18n="total_methods">Total Methods</div>
+            <div class="metric-big" style="color:var(--purple)">287</div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div class="card-title">API Version</div>
+            <div class="metric-big">v1</div>
+          </div>
+        </div>
+
+        <div class="search-wrapper">
+          <span class="search-icon">&#8981;</span>
+          <input class="search-input" id="class-search" type="text" placeholder="Search classes or methods..." oninput="filterClasses()">
+        </div>
+
+        <div id="class-list"></div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════
+           PAGE: HARDWARE INFO
+           ═══════════════════════════════════════════════ -->
+      <div class="page" id="page-hardware">
+        <div class="grid grid-2" style="margin-bottom:16px">
+          <div class="card">
+            <div class="card-title">System</div>
+            <table class="info-table">
+              <tr><td>OS</td><td>macOS 26.3.1 (25D2128)</td></tr>
+              <tr><td data-i18n="arch">Architecture</td><td>arm64</td></tr>
+              <tr><td>CPU</td><td>Apple M3 Pro</td></tr>
+              <tr><td>CPU Cores</td><td>12 total (8P + 4E)</td></tr>
+              <tr><td>RAM</td><td>18 GB</td></tr>
+              <tr><td>Xcode CLI</td><td>/Applications/Xcode.app/Contents/Developer</td></tr>
+            </table>
+          </div>
+          <div class="card">
+            <div class="card-title">Apple Neural Engine</div>
+            <table class="info-table">
+              <tr><td>Chip</td><td>M3 Pro</td></tr>
+              <tr><td data-i18n="arch">Architecture</td><td style="color:var(--cyan)">h15g</td></tr>
+              <tr><td>ANE Cores</td><td>16</td></tr>
+              <tr><td>API</td><td>v1 (35 classes)</td></tr>
+              <tr><td>Apple Spec</td><td>18 TOPS (INT8, marketing)</td></tr>
+              <tr><td>Thermal</td><td style="color:var(--green)">Nominal</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-title" data-i18n="known_limits">Known Limits</div>
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr><th data-i18n="constraint">Constraint</th><th data-i18n="value">Value</th><th data-i18n="notes">Notes</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>SRAM</td><td>~32 MB</td><td style="color:var(--text-muted)" data-i18n="sram_note">All Apple Silicon, firmware-managed</td></tr>
+              <tr><td data-i18n="compile_budget">Compile Budget</td><td>~119 per process</td><td style="color:var(--text-muted)" data-i18n="compile_note">Silent failures after limit, solved by DSP</td></tr>
+              <tr><td>IOSurface Slots</td><td>128 per execution</td><td style="color:var(--text-muted)" data-i18n="io_note">Max input/output buffers per model</td></tr>
+              <tr><td data-i18n="priority_queues">Priority Queues</td><td>8 (p0&ndash;p7)</td><td style="color:var(--text-muted)" data-i18n="pq_note">Internal ANE scheduler</td></tr>
+              <tr><td data-i18n="thermal_throttle">Thermal Throttling</td><td style="color:var(--green)" data-i18n="not_observed">Not observed</td><td style="color:var(--text-muted)" data-i18n="thermal_note">ANE stays Nominal under sustained load</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════
+           PAGE: MONITOR
+           ═══════════════════════════════════════════════ -->
+      <div class="page" id="page-monitor">
+        <div class="grid grid-2" style="margin-bottom:16px">
+          <!-- Device Info -->
+          <div class="card">
+            <div class="card-title">_ANEDeviceInfo</div>
+            <table class="info-table">
+              <tr><td>hasANE</td><td style="color:var(--green)">YES</td></tr>
+              <tr><td>numANEs</td><td>1</td></tr>
+              <tr><td>numANECores</td><td>16</td></tr>
+              <tr><td>architecture</td><td style="color:var(--cyan)">h15g</td></tr>
+              <tr><td>subType</td><td>h15</td></tr>
+              <tr><td>subTypeVariant</td><td>g</td></tr>
+              <tr><td>boardType</td><td>J516cAP</td></tr>
+              <tr><td>product</td><td>macOS</td></tr>
+              <tr><td>build</td><td>25D2128</td></tr>
+              <tr><td>bootArgs</td><td style="color:var(--text-dim)">(none)</td></tr>
+              <tr><td>excessiveIdlePower</td><td>NO</td></tr>
+              <tr><td>virtualMachine</td><td>NO</td></tr>
+              <tr><td>internalBuild</td><td>NO</td></tr>
+            </table>
+          </div>
+
+          <!-- Thermal + Sustained -->
+          <div>
+            <div class="card" style="margin-bottom:16px;display:flex;flex-direction:column;align-items:center;padding:28px">
+              <div class="card-title" style="align-self:flex-start">Thermal State</div>
+              <div class="thermal-gauge-large" style="margin:12px 0">
+                <svg width="180" height="180" viewBox="0 0 180 180" style="transform:rotate(-90deg)">
+                  <circle cx="90" cy="90" r="76" fill="none" stroke="var(--border)" stroke-width="10"/>
+                  <circle cx="90" cy="90" r="76" fill="none" stroke="var(--green)" stroke-width="10"
+                    stroke-dasharray="477.5" stroke-dashoffset="358.1"
+                    stroke-linecap="round"/>
+                </svg>
+                <div style="position:absolute;display:flex;flex-direction:column;align-items:center">
+                  <span class="thermal-state-label" style="color:var(--green)">Nominal</span>
+                  <span style="font-size:10px;color:var(--text-muted);margin-top:2px">25% load</span>
+                </div>
+              </div>
+              <div class="thermal-states">
+                <span class="thermal-state-item active-green">Nominal</span>
+                <span class="thermal-state-item">Fair</span>
+                <span class="thermal-state-item">Serious</span>
+                <span class="thermal-state-item">Critical</span>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-title" data-i18n="sustained_test">Sustained Test (5s)</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                <button class="btn btn-primary btn-sm" id="btn-sustained" onclick="runSustainedTest()" style="padding:7px 14px;font-size:12px">
+                  <span data-i18n="run_test">Run Test</span>
+                </button>
+                <span id="sustained-status" style="font-family:var(--mono);font-size:11px;color:var(--text-muted)"></span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" id="sustained-progress" style="width:0"></div></div>
+              <div id="sustained-result" style="margin-top:12px;display:none">
+                <div class="stat-grid">
+                  <div class="stat-item"><span class="stat-label" data-i18n="evals">Evaluations</span><span class="stat-value" id="sus-evals">4,892</span></div>
+                  <div class="stat-item"><span class="stat-label">TFLOPS</span><span class="stat-value" style="color:var(--blue)" id="sus-tflops">5.01</span></div>
+                  <div class="stat-item"><span class="stat-label" data-i18n="avg_latency">Avg Latency</span><span class="stat-value" id="sus-latency">1.02 ms</span></div>
+                  <div class="stat-item"><span class="stat-label" data-i18n="thermal_drift">Thermal Drift</span><span class="stat-value" style="color:var(--green)" id="sus-thermal">None</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="locked-note">
+              <span class="lock-icon">&#128274;</span>
+              <span><strong>perfStatsMask:</strong> <span data-i18n="perf_note">nil on consumer macOS &mdash; Apple-internal only. Hardware execution time, cycles, and memory stall counters are not accessible.</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════
+           PAGE: ABOUT
+           ═══════════════════════════════════════════════ -->
+      <div class="page" id="page-about">
+        <div class="card" style="margin-bottom:24px;padding:28px">
+          <h2 style="font-size:20px;font-weight:700;margin-bottom:8px" data-i18n="about_title">What is ANE-Training?</h2>
+          <p style="color:var(--text-secondary);line-height:1.7;font-size:13px;max-width:720px" data-i18n="about_intro">
+            Your Mac has a <strong style="color:var(--text)">Neural Engine (ANE)</strong> &mdash; an AI chip with 16 cores
+            and up to 38 TOPS. Apple officially only allows inference (CoreML).
+            This project breaks that restriction: <strong style="color:var(--green)">training directly on the ANE.</strong>
+          </p>
+        </div>
+
+        <div class="section-title" data-i18n="differentiators">Key Differentiators</div>
+        <div class="feature-grid" style="margin-bottom:24px">
+          <div class="feature-card">
+            <div class="feature-icon" style="background:var(--blue-dim);color:var(--blue)">&#9670;</div>
+            <h3>Dynamic Spatial Packing</h3>
+            <p data-i18n="feat_dsp">Weights as IOSurface input instead of BLOBFILE. Compile once, change weights as often as you want. No recompile limit.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" style="background:var(--purple);color:#fff;background:rgba(191,90,242,0.2);color:var(--purple)">&#9733;</div>
+            <h3 data-i18n="feat_api_title">76+ Private API Classes</h3>
+            <p data-i18n="feat_api">Discovered via runtime introspection. Other projects know only 4. Version detection survives Apple API changes automatically.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" style="background:var(--cyan);color:#fff;background:rgba(100,210,255,0.2);color:var(--cyan)">&#123;&#125;</div>
+            <h3 data-i18n="feat_libane_title">Stable C API (libane)</h3>
+            <p data-i18n="feat_libane">73KB, usable from any language. Your code against ane.h never breaks, no matter what Apple changes.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" style="background:var(--green-dim);color:var(--green)">&#9679;</div>
+            <h3 data-i18n="feat_privacy_title">100% Local, 100% Private</h3>
+            <p data-i18n="feat_privacy">No cloud service, no account, no data ever leaves your device. Train models with complete privacy.</p>
+          </div>
+        </div>
+
+        <div class="section-title" data-i18n="comparison">Training Method Comparison</div>
+        <div class="card">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>CPU</th>
+                <th>GPU (MLX)</th>
+                <th class="ane-col">ANE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="color:var(--text-muted)" data-i18n="throughput">Throughput</td>
+                <td>10&ndash;20 TOPS</td>
+                <td>~10 TFLOPS</td>
+                <td class="ane-col winner" data-i18n="ane_tflops">9&ndash;38 TFLOPS</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-muted)" data-i18n="power">Power</td>
+                <td data-i18n="high">High</td>
+                <td data-i18n="high">High</td>
+                <td class="ane-col winner" data-i18n="low">Low</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-muted)" data-i18n="isolation_label">Isolation</td>
+                <td data-i18n="shared">Shared</td>
+                <td data-i18n="shared">Shared memory</td>
+                <td class="ane-col winner" data-i18n="dedicated">Dedicated silicon</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-muted)">I/O</td>
+                <td data-i18n="memcpy">memcpy</td>
+                <td data-i18n="unified_mem">Unified memory</td>
+                <td class="ane-col winner">Zero-copy IOSurface</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-muted)" data-i18n="matmul_strategy">Matrix Strategy</td>
+                <td>BLAS / vDSP</td>
+                <td data-i18n="native_matmul">Native matmul</td>
+                <td class="ane-col winner" data-i18n="conv1x1">Conv 1x1 (3x faster)</td>
+              </tr>
+              <tr>
+                <td style="color:var(--text-muted)" data-i18n="recompile">Recompile Needed</td>
+                <td>N/A</td>
+                <td>N/A</td>
+                <td class="ane-col winner" data-i18n="never_dsp">Never (DSP)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   DATA
+   ═══════════════════════════════════════════════════════════════ */
+const KERNEL_DATA = [
+  { ch: 256,  sp: 64,  gflop: 0.034, lat: 0.12, tflops: 0.28 },
+  { ch: 256,  sp: 128, gflop: 0.067, lat: 0.15, tflops: 0.45 },
+  { ch: 512,  sp: 64,  gflop: 0.134, lat: 0.14, tflops: 0.96 },
+  { ch: 512,  sp: 128, gflop: 0.268, lat: 0.18, tflops: 1.49 },
+  { ch: 512,  sp: 256, gflop: 0.537, lat: 0.28, tflops: 1.92 },
+  { ch: 768,  sp: 128, gflop: 0.603, lat: 0.22, tflops: 2.74 },
+  { ch: 768,  sp: 256, gflop: 1.207, lat: 0.31, tflops: 3.89 },
+  { ch: 1024, sp: 128, gflop: 1.074, lat: 0.30, tflops: 3.58 },
+  { ch: 1024, sp: 256, gflop: 2.147, lat: 0.42, tflops: 5.11 },
+];
+
+const STACKED_DATA = [
+  { depth: 32,  ch: 768,  sp: 256, gflop: 38.6,  lat: 3.8,  tflops: 10.16 },
+  { depth: 64,  ch: 768,  sp: 256, gflop: 77.2,  lat: 6.9,  tflops: 11.19 },
+  { depth: 128, ch: 768,  sp: 256, gflop: 154.5, lat: 12.1, tflops: 12.77 },
+  { depth: 128, ch: 512,  sp: 256, gflop: 68.7,  lat: 6.0,  tflops: 11.45 },
+  { depth: 128, ch: 1024, sp: 256, gflop: 274.9, lat: 23.5, tflops: 11.70 },
+  { depth: 256, ch: 768,  sp: 256, gflop: 309.0, lat: 24.2, tflops: 12.77 },
+  { depth: 128, ch: 2048, sp: 256, gflop: 1099.5,lat: 86.0, tflops: 12.79 },
+];
+
+const ANE_CLASSES = {
+  'Client': [
+    { name: '_ANEClient', methods: ['initWithName:', 'evaluateWithModel:options:completion:', 'evaluateRealTimeWithModel:', 'doEvaluateDirectWithModel:', 'beginRealTimeTask', 'compileModel:options:', 'unloadModel:'] },
+    { name: '_ANEDaemonConnection', methods: ['connect', 'disconnect', 'sendRequest:completion:'] },
+  ],
+  'Model': [
+    { name: '_ANEModel', methods: ['initWithPath:', 'initWithCompiledModel:', 'modelDescription', 'inputFeatureNames', 'outputFeatureNames'] },
+    { name: '_ANEInMemoryModel', methods: ['initWithData:', 'initWithIOSurface:', 'modelData', 'setModelData:'] },
+    { name: '_ANECompiledModel', methods: ['initWithCacheURL:', 'modelIdentifier', 'programHandle'] },
+  ],
+  'Request': [
+    { name: '_ANERequest', methods: ['initWithModel:inputs:outputs:', 'setQoS:', 'setPriority:', 'setCompletionHandler:'] },
+    { name: '_ANEChainingRequest', methods: ['initWithRequests:', 'addRequest:', 'setLoopbackMode:', 'execute'] },
+    { name: '_ANEEvaluationRequest', methods: ['initWithModel:', 'setInputs:', 'setOutputs:', 'evaluate'] },
+  ],
+  'Device & Info': [
+    { name: '_ANEDeviceInfo', methods: ['hasANE', 'numANEs', 'numANECores', 'architecture', 'subType', 'subTypeVariant', 'boardType', 'product', 'build'] },
+    { name: '_ANEDeviceController', methods: ['sharedController', 'deviceInfo', 'thermalState', 'powerState'] },
+    { name: '_ANEPerformanceStats', methods: ['perfStatsMask', 'executionTime', 'cycleCount', 'dataMovement'] },
+    { name: '_ANEThermalNotifier', methods: ['startMonitoring', 'stopMonitoring', 'currentState', 'setDelegate:'] },
+  ],
+  'Compiler & Runtime': [
+    { name: '_ANECompiler', methods: ['compileModel:options:error:', 'compileMIL:weights:options:', 'supportedOperations'] },
+    { name: '_ANECompilerOptions', methods: ['initWithDictionary:', 'setOption:forKey:', 'optimizationLevel', 'targetArchitecture'] },
+    { name: '_ANERuntime', methods: ['sharedRuntime', 'loadModel:', 'unloadModel:', 'activeModelCount'] },
+    { name: '_ANERuntimeOptions', methods: ['setQueuePriority:', 'setMemoryBudget:', 'setIOSurfaceMode:'] },
+  ],
+  'Buffer & I/O': [
+    { name: '_ANEIOSurfaceObject', methods: ['initWithSurface:', 'surface', 'lock', 'unlock', 'bytesPerRow', 'baseAddress'] },
+    { name: '_ANEBuffer', methods: ['initWithSize:', 'initWithIOSurface:', 'data', 'length', 'ioSurface'] },
+    { name: '_ANEMultiBuffer', methods: ['initWithBuffers:', 'bufferAtIndex:', 'count'] },
+  ],
+  'Events & Scheduling': [
+    { name: '_ANESharedEvent', methods: ['initWithDevice:', 'signal', 'wait', 'signaledValue'] },
+    { name: '_ANEQueueScheduler', methods: ['initWithPriority:', 'enqueue:', 'cancelAll', 'pendingCount'] },
+    { name: '_ANEFirmwareExecutor', methods: ['executeProgram:', 'loadProgram:', 'programStatus'] },
+  ],
+};
+
+const SHAKESPEARE_TEXT = `ROMEO:\nBut, soft! what light through yonder window breaks?\nIt is the east, and Juliet is the sun.\nArise, fair sun, and kill the envious moon,\nWho is already sick and pale with grief,\nThat thou her maid art far more fair than she:\nBe not her maid, since she is envious;\nHer vestal livery is but sick and green\nAnd none but fools do wear it; cast it off.\nIt is my lady, O, it is my love!\nO, that she knew she were!\nShe speaks yet she says nothing: what of that?\nHer eye discourses; I will answer it.\nI am too bold, \'tis not to me she speaks:\nTwo of the fairest stars in all the heaven,\nHaving some business, do entreat her eyes\nTo twinkle in their spheres till they return.`;
+
+/* ═══════════════════════════════════════════════════════════════
+   i18n
+   ═══════════════════════════════════════════════════════════════ */
+const i18n = {
+  en: {
+    nav_dashboard: 'Dashboard', nav_training: 'Training Demo', nav_benchmark: 'Benchmark',
+    nav_generate: 'Text Generation', nav_explorer: 'ANE Explorer', nav_hardware: 'Hardware Info',
+    nav_monitor: 'Monitor', nav_about: 'About', thermal_nominal: 'Nominal',
+    hw_title: 'Hardware', arch: 'Architecture', perf_title: 'Performance',
+    peak: 'Peak', sustained: 'Sustained', dispatch: 'Dispatch Overhead', efficiency: 'Efficiency',
+    silicon_peak: 'Silicon Peak', vs_spec: 'vs Apple Spec', constraints: 'System Constraints',
+    compile_budget: 'Compile Budget', qos_title: 'QoS Performance Levels', optimal: 'Optimal',
+    qos_note: 'less OS scheduling interference', chip_compare: 'Chip Comparison',
+    train_config: 'Configuration', model: 'Model', compile_status: 'Compile',
+    compiled_once: 'Compiled once — Dynamic Spatial Packing', start_training: 'Start Training',
+    loss_curve: 'Loss Curve', weight_conv: 'Weight Convergence', train_log: 'Training Log',
+    key_insight: 'Key Insight:', insight_text: '1 compile, unlimited steps — Dynamic Spatial Packing bypasses ANE\'s ~119 compile limit by encoding weights as IOSurface inputs.',
+    kernel_sweep: 'Single Conv Sweep', shape: 'Shape', latency: 'Latency (ms)',
+    stacked_conv: 'Stacked Conv (Amortized Dispatch)', sustained_5s: 'Phase 3 — 5-Second Sustained Peak',
+    evals: 'Evaluations', avg_latency: 'Avg Latency', all_configs: 'All Configurations',
+    chip_ref: 'Chip Reference', run_bench: 'Run Benchmark', vocab: 'Vocabulary', method: 'Method',
+    ane_inference: 'ANE inference', generate: 'Generate', clear: 'Clear',
+    total_classes: 'Total Classes', total_methods: 'Total Methods',
+    known_limits: 'Known Limits', constraint: 'Constraint', value: 'Value', notes: 'Notes',
+    sram_note: 'All Apple Silicon, firmware-managed', compile_note: 'Silent failures after limit, solved by DSP',
+    io_note: 'Max input/output buffers per model', priority_queues: 'Priority Queues',
+    pq_note: 'Internal ANE scheduler', thermal_throttle: 'Thermal Throttling',
+    not_observed: 'Not observed', thermal_note: 'ANE stays Nominal under sustained load',
+    sustained_test: 'Sustained Test (5s)', run_test: 'Run Test', thermal_drift: 'Thermal Drift',
+    perf_note: 'nil on consumer macOS — Apple-internal only. Hardware execution time, cycles, and memory stall counters are not accessible.',
+    about_title: 'What is ANE-Training?',
+    about_intro: 'Your Mac has a <strong style="color:var(--text)">Neural Engine (ANE)</strong> — an AI chip with 16 cores and up to 38 TOPS. Apple officially only allows inference (CoreML). This project breaks that restriction: <strong style="color:var(--green)">training directly on the ANE.</strong>',
+    differentiators: 'Key Differentiators', comparison: 'Training Method Comparison',
+    feat_dsp: 'Weights as IOSurface input instead of BLOBFILE. Compile once, change weights as often as you want. No recompile limit.',
+    feat_api_title: '76+ Private API Classes', feat_api: 'Discovered via runtime introspection. Other projects know only 4. Version detection survives Apple API changes automatically.',
+    feat_libane_title: 'Stable C API (libane)', feat_libane: '73KB, usable from any language. Your code against ane.h never breaks, no matter what Apple changes.',
+    feat_privacy_title: '100% Local, 100% Private', feat_privacy: 'No cloud service, no account, no data ever leaves your device. Train models with complete privacy.',
+    throughput: 'Throughput', power: 'Power', isolation_label: 'Isolation',
+    high: 'High', low: 'Low', shared: 'Shared', dedicated: 'Dedicated silicon',
+    memcpy: 'memcpy', unified_mem: 'Unified memory',
+    matmul_strategy: 'Matrix Strategy', native_matmul: 'Native matmul', conv1x1: 'Conv 1x1 (3x faster)',
+    recompile: 'Recompile Needed', never_dsp: 'Never (DSP)',
+    ane_tflops: '9–38 TFLOPS', trained_ane: 'Trained on ANE',
+  },
+  de: {
+    nav_dashboard: 'Dashboard', nav_training: 'Training Demo', nav_benchmark: 'Benchmark',
+    nav_generate: 'Textgenerierung', nav_explorer: 'ANE Explorer', nav_hardware: 'Hardware Info',
+    nav_monitor: 'Monitor', nav_about: 'Info', thermal_nominal: 'Nominal',
+    hw_title: 'Hardware', arch: 'Architektur', perf_title: 'Leistung',
+    peak: 'Spitze', sustained: 'Dauerlast', dispatch: 'Dispatch-Overhead', efficiency: 'Effizienz',
+    silicon_peak: 'Silizium-Peak', vs_spec: 'vs Apple Spec', constraints: 'Systemgrenzen',
+    compile_budget: 'Compile-Budget', qos_title: 'QoS-Leistungsstufen', optimal: 'Optimal',
+    qos_note: 'weniger OS-Scheduling-Interferenz', chip_compare: 'Chip-Vergleich',
+    train_config: 'Konfiguration', model: 'Modell', compile_status: 'Kompilierung',
+    compiled_once: 'Einmal kompiliert — Dynamic Spatial Packing', start_training: 'Training starten',
+    loss_curve: 'Verlustkurve', weight_conv: 'Gewichtskonvergenz', train_log: 'Training-Log',
+    key_insight: 'Kernpunkt:', insight_text: '1 Compile, unbegrenzt Steps — Dynamic Spatial Packing umgeht ANEs ~119 Compile-Limit durch Weights als IOSurface-Inputs.',
+    kernel_sweep: 'Einzel-Conv Sweep', shape: 'Form', latency: 'Latenz (ms)',
+    stacked_conv: 'Gestapeltes Conv (Amortisierter Dispatch)', sustained_5s: 'Phase 3 — 5-Sekunden Dauerlast',
+    evals: 'Auswertungen', avg_latency: 'Durchschn. Latenz', all_configs: 'Alle Konfigurationen',
+    chip_ref: 'Chip-Referenz', run_bench: 'Benchmark starten', vocab: 'Vokabular', method: 'Methode',
+    ane_inference: 'ANE-Inferenz', generate: 'Generieren', clear: 'Löschen',
+    total_classes: 'Klassen gesamt', total_methods: 'Methoden gesamt',
+    known_limits: 'Bekannte Grenzen', constraint: 'Einschränkung', value: 'Wert', notes: 'Hinweise',
+    sram_note: 'Alle Apple Silicon, Firmware-verwaltet', compile_note: 'Stille Fehler nach Limit, gelöst durch DSP',
+    io_note: 'Max Ein-/Ausgabepuffer pro Modell', priority_queues: 'Prioritätswarteschlangen',
+    pq_note: 'Interner ANE-Scheduler', thermal_throttle: 'Thermisches Throttling',
+    not_observed: 'Nicht beobachtet', thermal_note: 'ANE bleibt unter Dauerlast bei Nominal',
+    sustained_test: 'Dauerlast-Test (5s)', run_test: 'Test starten', thermal_drift: 'Thermische Drift',
+    perf_note: 'nil auf Consumer-macOS — nur Apple-intern. Hardware-Ausführungszeit, Zyklen und Memory-Stall-Zähler sind nicht zugänglich.',
+    about_title: 'Was ist ANE-Training?',
+    about_intro: 'Dein Mac hat eine <strong style="color:var(--text)">Neural Engine (ANE)</strong> — einen KI-Chip mit 16 Cores und bis zu 38 TOPS. Apple erlaubt offiziell nur Inference (CoreML). Dieses Projekt bricht diese Beschränkung: <strong style="color:var(--green)">Training direkt auf dem ANE.</strong>',
+    differentiators: 'Alleinstellungsmerkmale', comparison: 'Trainingsmethoden-Vergleich',
+    feat_dsp: 'Weights als IOSurface-Input statt BLOBFILE. Einmal kompilieren, Weights beliebig oft ändern. Kein Recompile-Limit.',
+    feat_api_title: '76+ Private API-Klassen', feat_api: 'Entdeckt durch Runtime-Introspektion. Andere Projekte kennen nur 4. Versionserkennung überlebt Apple-API-Änderungen automatisch.',
+    feat_libane_title: 'Stabile C-API (libane)', feat_libane: '73KB, nutzbar aus jeder Sprache. Dein Code gegen ane.h bricht nie, egal was Apple ändert.',
+    feat_privacy_title: '100% Lokal, 100% Privat', feat_privacy: 'Kein Cloud-Service, kein Account, keine Daten verlassen dein Gerät. Trainiere Modelle mit kompletter Privatsphäre.',
+    throughput: 'Durchsatz', power: 'Strom', isolation_label: 'Isolation',
+    high: 'Hoch', low: 'Niedrig', shared: 'Geteilt', dedicated: 'Dediziertes Silizium',
+    memcpy: 'memcpy', unified_mem: 'Unified Memory',
+    matmul_strategy: 'Matrix-Strategie', native_matmul: 'Natives matmul', conv1x1: 'Conv 1x1 (3x schneller)',
+    recompile: 'Recompile nötig', never_dsp: 'Nie (DSP)',
+    ane_tflops: '9–38 TFLOPS', trained_ane: 'Auf ANE trainiert',
+  }
+};
+
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.documentElement.setAttribute('data-lang', lang);
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.trim().toLowerCase() === lang));
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (i18n[lang][key]) {
+      if (el.querySelector('strong') || i18n[lang][key].includes('<strong')) {
+        el.innerHTML = i18n[lang][key];
+      } else {
+        el.textContent = i18n[lang][key];
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THEME TOGGLE
+   ═══════════════════════════════════════════════════════════════ */
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('theme-btn-dark').classList.toggle('active', theme === 'dark');
+  document.getElementById('theme-btn-light').classList.toggle('active', theme === 'light');
+  localStorage.setItem('ane-theme', theme);
+}
+
+// Restore saved theme on load
+(function() {
+  const saved = localStorage.getItem('ane-theme');
+  if (saved === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('theme-btn-dark').classList.remove('active');
+      document.getElementById('theme-btn-light').classList.add('active');
+    });
+  }
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════════════════════ */
+const pageTitles = {
+  dashboard: 'Dashboard', training: 'Training Demo', benchmark: 'Benchmark',
+  generate: 'Text Generation', explorer: 'ANE Explorer', hardware: 'Hardware Info',
+  monitor: 'Monitor', about: 'About'
+};
+const pageTitlesDe = {
+  dashboard: 'Dashboard', training: 'Training Demo', benchmark: 'Benchmark',
+  generate: 'Textgenerierung', explorer: 'ANE Explorer', hardware: 'Hardware Info',
+  monitor: 'Monitor', about: 'Info'
+};
+
+function navigateTo(page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
+  const titles = currentLang === 'de' ? pageTitlesDe : pageTitles;
+  document.getElementById('pageTitle').textContent = titles[page] || page;
+  // Animate elements
+  setTimeout(() => animateVisibleElements(), 50);
+  // Animate bars for dashboard
+  if (page === 'dashboard') setTimeout(() => animateBars(), 200);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════ */
+function animateVisibleElements() {
+  document.querySelectorAll('.page.active .animate-in').forEach(el => el.classList.add('visible'));
+}
+
+function animateCountUp(el) {
+  const target = parseFloat(el.dataset.target);
+  const decimals = parseInt(el.dataset.decimals) || 0;
+  const duration = 1200;
+  const start = performance.now();
+  function update(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = (target * eased).toFixed(decimals);
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+function animateBars() {
+  document.querySelectorAll('.page.active .bar-fill[data-width]').forEach((bar, i) => {
+    setTimeout(() => { bar.style.width = bar.dataset.width + '%'; }, i * 80);
+  });
+  document.querySelectorAll('.page.active .vbar[data-height]').forEach((bar, i) => {
+    setTimeout(() => { bar.style.height = bar.dataset.height + '%'; }, i * 100);
+  });
+}
+
+function animateGauges() {
+  const circumference = 364.4;
+  // TFLOPS gauge: 12.79 / 15 scale
+  const tflopsEl = document.getElementById('gauge-tflops');
+  const tflopsVal = document.getElementById('gauge-tflops-val');
+  const tflopsTarget = 12.79;
+  const tflopsOffset = circumference - (tflopsTarget / 15) * circumference;
+  tflopsEl.style.strokeDashoffset = tflopsOffset;
+  // Efficiency gauge: 71%
+  const effEl = document.getElementById('gauge-eff');
+  const effVal = document.getElementById('gauge-eff-val');
+  const effOffset = circumference - (71 / 100) * circumference;
+  effEl.style.strokeDashoffset = effOffset;
+  // Animate values
+  animateValue(tflopsVal, 0, 12.79, 1500, 2);
+  animateValue(effVal, 0, 71, 1500, 0, '%');
+}
+
+function animateValue(el, from, to, duration, decimals, suffix = '') {
+  const start = performance.now();
+  function update(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = (from + (to - from) * eased).toFixed(decimals) + suffix;
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TRAINING SIMULATION
+   ═══════════════════════════════════════════════════════════════ */
+let trainingRunning = false;
+
+function generateTrainingData() {
+  const data = [];
+  for (let step = 0; step <= 60; step++) {
+    const t = step / 60;
+    const loss = 12.45 * Math.exp(-6 * t) + 0.0001;
+    const w = 2.0 * (1 - Math.exp(-4 * t)) + 0.03 * Math.exp(-4 * t);
+    const w2 = 2.0 * (1 - Math.exp(-3.8 * t)) + 0.03 * Math.exp(-3.8 * t);
+    data.push({
+      step, loss: Math.max(loss, 0.0001),
+      w00: Math.min(w, 2.0), w11: Math.min(w2, 2.0),
+      ms: (2.0 + Math.random() * 0.3).toFixed(1)
+    });
+  }
+  return data;
+}
+
+function startTraining() {
+  if (trainingRunning) return;
+  trainingRunning = true;
+  const btn = document.getElementById('btn-train');
+  const status = document.getElementById('train-status');
+  btn.disabled = true;
+  const tbody = document.getElementById('train-tbody');
+  tbody.innerHTML = '';
+  const data = generateTrainingData();
+  const lossCtx = initChart('loss-chart');
+  const weightCtx = initChart('weight-chart');
+  const lossPoints = [];
+  const w00Points = [];
+  const w11Points = [];
+  let idx = 0;
+
+  function addStep() {
+    if (idx >= data.length) {
+      trainingRunning = false;
+      btn.disabled = false;
+      status.textContent = currentLang === 'de' ? 'Fertig — 60 Steps' : 'Complete — 60 steps';
+      return;
+    }
+    const d = data[idx];
+    status.textContent = `Step ${d.step}/60`;
+    // Add row (show every 5th step or first/last)
+    if (d.step % 5 === 0 || d.step === 60) {
+      const tr = document.createElement('tr');
+      tr.className = 'new-row';
+      tr.innerHTML = `<td>${d.step}</td><td>${d.loss.toFixed(4)}</td><td>${d.w00.toFixed(2)}</td><td>${d.w11.toFixed(2)}</td><td>${d.ms}</td>`;
+      if (d.step === 60) tr.classList.add('highlight');
+      tbody.appendChild(tr);
+      tr.parentElement.parentElement.parentElement.scrollTop = 99999;
+    }
+    // Update charts
+    lossPoints.push({ x: d.step / 60, y: d.loss });
+    w00Points.push({ x: d.step / 60, y: d.w00 });
+    w11Points.push({ x: d.step / 60, y: d.w11 });
+    drawLossChart(lossCtx, lossPoints);
+    drawWeightChart(weightCtx, w00Points, w11Points);
+    idx++;
+    setTimeout(addStep, 40);
+  }
+  addStep();
+}
+
+function initChart(id) {
+  const canvas = document.getElementById(id);
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+
+function drawLossChart(ctx, points) {
+  const w = ctx.canvas.clientWidth;
+  const h = ctx.canvas.clientHeight;
+  const pad = { t: 20, r: 16, b: 30, l: 50 };
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (h - pad.t - pad.b) * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+  ctx.font = '10px SF Mono, Menlo, monospace';
+  ctx.textAlign = 'right';
+  const maxLoss = 13;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (h - pad.t - pad.b) * i / 4;
+    ctx.fillText((maxLoss * (1 - i / 4)).toFixed(1), pad.l - 6, y + 3);
+  }
+  ctx.textAlign = 'center';
+  ctx.fillText('0', pad.l, h - pad.b + 14);
+  ctx.fillText('60', w - pad.r, h - pad.b + 14);
+
+  if (points.length < 2) return;
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = '#FF453A';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  points.forEach((p, i) => {
+    const x = pad.l + p.x * (w - pad.l - pad.r);
+    const y = pad.t + (1 - p.y / maxLoss) * (h - pad.t - pad.b);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Gradient fill
+  const lastP = points[points.length - 1];
+  ctx.lineTo(pad.l + lastP.x * (w - pad.l - pad.r), h - pad.b);
+  ctx.lineTo(pad.l, h - pad.b);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.t, 0, h - pad.b);
+  grad.addColorStop(0, 'rgba(255,69,58,0.15)');
+  grad.addColorStop(1, 'rgba(255,69,58,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+
+function drawWeightChart(ctx, w00, w11) {
+  const w = ctx.canvas.clientWidth;
+  const h = ctx.canvas.clientHeight;
+  const pad = { t: 20, r: 16, b: 30, l: 50 };
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim();
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (h - pad.t - pad.b) * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+  }
+
+  // Target line at 2.0
+  const targetY = pad.t + (1 - 2.0 / 2.5) * (h - pad.t - pad.b);
+  ctx.strokeStyle = '#30D15844';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(pad.l, targetY); ctx.lineTo(w - pad.r, targetY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Labels
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+  ctx.font = '10px SF Mono, Menlo, monospace';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (h - pad.t - pad.b) * i / 4;
+    ctx.fillText((2.5 * (1 - i / 4)).toFixed(1), pad.l - 6, y + 3);
+  }
+  ctx.fillStyle = '#30D158';
+  ctx.textAlign = 'left';
+  ctx.fillText('target=2.0', w - pad.r - 60, targetY - 6);
+
+  function drawLine(points, color) {
+    if (points.length < 2) return;
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    points.forEach((p, i) => {
+      const x = pad.l + p.x * (w - pad.l - pad.r);
+      const y = pad.t + (1 - p.y / 2.5) * (h - pad.t - pad.b);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  drawLine(w00, '#0A84FF');
+  drawLine(w11, '#BF5AF2');
+
+  // Legend
+  ctx.font = '10px SF Mono, Menlo, monospace';
+  ctx.fillStyle = '#0A84FF'; ctx.fillText('W[0,0]', pad.l + 8, pad.t + 10);
+  ctx.fillStyle = '#BF5AF2'; ctx.fillText('W[1,1]', pad.l + 60, pad.t + 10);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BENCHMARK SIMULATION
+   ═══════════════════════════════════════════════════════════════ */
+let benchRunning = false;
+
+function startBenchmark() {
+  if (benchRunning) return;
+  benchRunning = true;
+  const btn = document.getElementById('btn-bench');
+  const status = document.getElementById('bench-status');
+  btn.disabled = true;
+
+  const phases = [1,2,3,4,5,6];
+  let current = 0;
+
+  function runPhase() {
+    if (current >= phases.length) {
+      benchRunning = false;
+      btn.disabled = false;
+      status.textContent = currentLang === 'de' ? 'Fertig' : 'Complete';
+      document.querySelectorAll('.phase-step').forEach(s => s.classList.add('done'));
+      document.querySelectorAll('.phase-step').forEach(s => s.classList.remove('active'));
+      return;
+    }
+    const p = phases[current];
+    status.textContent = `Phase ${p}/6`;
+
+    // Update stepper
+    document.querySelectorAll('.phase-step').forEach(s => {
+      const sp = parseInt(s.dataset.phase);
+      s.classList.toggle('done', sp < p);
+      s.classList.toggle('active', sp === p);
+    });
+
+    // Show phase content
+    document.querySelectorAll('.phase-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('bench-phase-' + p).classList.add('active');
+
+    // Phase-specific animations
+    if (p === 1) populateKernelTable();
+    if (p === 2) populateStackedTable();
+    if (p === 3) {
+      document.querySelectorAll('#bench-phase-3 .count-up').forEach(animateCountUp);
+    }
+    if (p === 4) {
+      setTimeout(() => {
+        document.querySelectorAll('#bench-qos-chart .bar-fill[data-width]').forEach((bar, i) => {
+          setTimeout(() => { bar.style.width = bar.dataset.width + '%'; }, i * 100);
+        });
+      }, 100);
+    }
+    if (p === 5) buildAllConfigsChart();
+    if (p === 6) {
+      setTimeout(() => {
+        document.querySelectorAll('#bench-chip-chart .vbar[data-height]').forEach((bar, i) => {
+          setTimeout(() => { bar.style.height = bar.dataset.height + '%'; }, i * 120);
+        });
+      }, 100);
+    }
+
+    current++;
+    setTimeout(runPhase, 1800);
+  }
+  runPhase();
+}
+
+function populateKernelTable() {
+  const tbody = document.getElementById('kernel-tbody');
+  tbody.innerHTML = '';
+  KERNEL_DATA.forEach((k, i) => {
+    setTimeout(() => {
+      const best = k.tflops === 5.11;
+      const tr = document.createElement('tr');
+      tr.className = 'new-row' + (best ? ' highlight' : '');
+      tr.innerHTML = `<td>${k.ch}x${k.sp}</td><td>${k.ch}</td><td>${k.sp}</td><td>${k.gflop.toFixed(3)}</td><td>${k.lat.toFixed(2)}</td><td>${k.tflops.toFixed(2)}</td>`;
+      tbody.appendChild(tr);
+    }, i * 120);
+  });
+}
+
+function populateStackedTable() {
+  const tbody = document.getElementById('stacked-tbody');
+  tbody.innerHTML = '';
+  STACKED_DATA.forEach((k, i) => {
+    setTimeout(() => {
+      const best = k.tflops >= 12.77;
+      const tr = document.createElement('tr');
+      tr.className = 'new-row' + (best ? ' highlight' : '');
+      tr.innerHTML = `<td>${k.depth}</td><td>${k.ch}</td><td>${k.sp}</td><td>${k.gflop.toFixed(1)}</td><td>${k.lat.toFixed(1)}</td><td>${k.tflops.toFixed(2)}</td>`;
+      tbody.appendChild(tr);
+    }, i * 120);
+  });
+}
+
+function buildAllConfigsChart() {
+  const container = document.getElementById('all-configs-chart');
+  container.innerHTML = '';
+  const allData = [
+    ...KERNEL_DATA.map(k => ({ label: `${k.ch}x${k.sp}`, tflops: k.tflops })),
+    ...STACKED_DATA.map(k => ({ label: `${k.depth}d ${k.ch}x${k.sp}`, tflops: k.tflops })),
+  ].sort((a, b) => b.tflops - a.tflops);
+
+  const max = 12.79;
+  allData.forEach((d, i) => {
+    const pct = (d.tflops / max * 100).toFixed(1);
+    const isTop = d.tflops >= 12.0;
+    const div = document.createElement('div');
+    div.className = 'bar-row';
+    div.innerHTML = `<span class="bar-label">${d.label}</span><div class="bar-track"><div class="bar-fill ${isTop ? 'optimal' : 'blue'}" data-width="${pct}" style="width:0"><span class="bar-fill-value">${d.tflops.toFixed(2)}</span></div></div>`;
+    container.appendChild(div);
+    setTimeout(() => {
+      div.querySelector('.bar-fill').style.width = pct + '%';
+    }, i * 60);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TEXT GENERATION
+   ═══════════════════════════════════════════════════════════════ */
+let genRunning = false;
+
+function startGeneration() {
+  if (genRunning) return;
+  genRunning = true;
+  const btn = document.getElementById('btn-generate');
+  btn.disabled = true;
+  const textEl = document.getElementById('terminal-text');
+  const cursorEl = document.getElementById('cursor');
+  let idx = 0;
+  const text = SHAKESPEARE_TEXT;
+
+  function typeChar() {
+    if (idx >= text.length) {
+      genRunning = false;
+      btn.disabled = false;
+      return;
+    }
+    if (text[idx] === '\n') {
+      textEl.innerHTML += '<br>';
+    } else {
+      textEl.textContent += text[idx];
+    }
+    idx++;
+    const term = document.getElementById('terminal');
+    term.scrollTop = term.scrollHeight;
+    setTimeout(typeChar, 25 + Math.random() * 35);
+  }
+  typeChar();
+}
+
+function clearTerminal() {
+  document.getElementById('terminal-text').innerHTML = '';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ANE EXPLORER
+   ═══════════════════════════════════════════════════════════════ */
+function buildClassList() {
+  const container = document.getElementById('class-list');
+  container.innerHTML = '';
+  Object.entries(ANE_CLASSES).forEach(([group, classes]) => {
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'class-group';
+    groupDiv.innerHTML = `<div class="class-group-header">${group}</div>`;
+    classes.forEach(cls => {
+      const itemDiv = document.createElement('div');
+      itemDiv.innerHTML = `
+        <div class="class-item" onclick="toggleClass(this)">
+          <span class="class-name">${cls.name}</span>
+          <span class="class-count">${cls.methods.length} methods</span>
+        </div>
+        <div class="class-methods">
+          ${cls.methods.map(m => `<div class="method-item">${m}</div>`).join('')}
+        </div>
+      `;
+      groupDiv.appendChild(itemDiv);
+    });
+    container.appendChild(groupDiv);
+  });
+}
+
+function toggleClass(el) {
+  el.classList.toggle('expanded');
+  const methods = el.nextElementSibling;
+  methods.classList.toggle('show');
+}
+
+function filterClasses() {
+  const q = document.getElementById('class-search').value.toLowerCase();
+  document.querySelectorAll('#class-list .class-group').forEach(group => {
+    let groupVisible = false;
+    group.querySelectorAll('.class-item').forEach(item => {
+      const parent = item.parentElement;
+      const name = item.querySelector('.class-name').textContent.toLowerCase();
+      const methods = parent.querySelector('.class-methods').textContent.toLowerCase();
+      const match = name.includes(q) || methods.includes(q);
+      parent.style.display = match ? '' : 'none';
+      if (match) groupVisible = true;
+    });
+    group.style.display = groupVisible ? '' : 'none';
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MONITOR - SUSTAINED TEST
+   ═══════════════════════════════════════════════════════════════ */
+function runSustainedTest() {
+  const btn = document.getElementById('btn-sustained');
+  const status = document.getElementById('sustained-status');
+  const progress = document.getElementById('sustained-progress');
+  const result = document.getElementById('sustained-result');
+  btn.disabled = true;
+  result.style.display = 'none';
+
+  let elapsed = 0;
+  const duration = 5000;
+  const interval = 50;
+
+  function tick() {
+    elapsed += interval;
+    const pct = Math.min(elapsed / duration * 100, 100);
+    progress.style.width = pct + '%';
+    status.textContent = (elapsed / 1000).toFixed(1) + 's / 5.0s';
+    if (elapsed >= duration) {
+      btn.disabled = false;
+      status.textContent = currentLang === 'de' ? 'Fertig' : 'Complete';
+      result.style.display = '';
+      return;
+    }
+    setTimeout(tick, interval);
+  }
+  tick();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  buildClassList();
+  // Animate dashboard on load
+  setTimeout(() => {
+    animateVisibleElements();
+    animateGauges();
+    document.querySelectorAll('.page.active .count-up').forEach(el => animateCountUp(el));
+  }, 100);
+  setTimeout(() => animateBars(), 400);
+});
+</script>
+
+</body>
+</html>
