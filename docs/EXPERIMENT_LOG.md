@@ -2,6 +2,8 @@
 **Date:** 2026-03-20
 **Branch:** experiment/3h-optimize-session
 **Baseline:** 77 ms/step, 2.26 TFLOPS, 0% overlap, loss flat at ~10.43
+**Status:** 11 investigation rounds completed. Main bug (FP16 underflow) found and fixed.
+**NOTE:** ANE compile budget exhausted during experiments — **reboot required** to recover.
 
 ## What Works
 - train_pipeline builds and runs (86 kernels, 5s compile)
