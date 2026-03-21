@@ -26,6 +26,7 @@
 - **ANE compile budget is SYSTEM-WIDE** — rapid exec() loops poison the daemon, requires reboot
 - Cannot reduce ACCUM_STEPS below ~100 (86 kernels per batch vs ~119 compile limit)
 - **Activation explosion** — x_cur grows to [-800, 600] over 5000 steps with res_alpha + Adam, attenuating all gradients
+- **Long training activation explosion** — even without res_alpha, activations grow to thousands over 25K+ steps with Adam. Stories-110M diverges to NaN at step 45K. Need lower LR or weight clipping for stable long runs.
 
 ## Confirmed Bugs
 
@@ -444,3 +445,38 @@ Step     Loss     Notes
 3. Removed res_alpha — stable activations (no explosion)
 4. 1B tokens instead of 500K — sufficient data for model capacity
 5. lr=3e-4, accum=10 — conservative but effective hyperparameters
+
+### Round 12d — 50K Step Training + Text Generation (COMPLETE)
+**Date:** 2026-03-21
+**Method:** Extended Stories-110M training to 50K steps on 1B tokens (accum=10, lr=3e-4) + built text generation pipeline
+
+**Results — Stories-110M 50K steps:**
+```
+Step     Loss     Notes
+    0    9.72     Random baseline
+ 5000    4.80     Rapid descent
+10000    3.78     Still improving
+15000    3.57     Slowing
+26200    3.00     Best checkpoint saved
+35000    3.27     Best overall (moving avg)
+45000    NaN      Diverged — activation explosion
+```
+
+**Loss curve:** 9.72 → 4.80 (5K) → 3.78 (10K) → 3.57 (15K) → 3.27 (35K best) → NaN (45K diverged)
+**Best checkpoint:** step 26200, loss=3.00
+**Model DOES learn** (loss 9.72→3.00 = massive improvement) but can't sustain long training
+
+**Activation explosion analysis:**
+- `x` grows from [-1, 1] to [-4400, 4700] at step 40K, then NaN
+- Standard residual (`x + layer_output`) without res_alpha prevents early explosion but not long-term
+- Over 25K+ steps, Adam pushes weights to grow, layer outputs grow, residuals accumulate
+- Weight decay (wd=0.1) isn't constraining enough
+- Needs: lower LR (1e-4), or weight clipping, or activation clamping for stable long training
+
+**Text generation:**
+- Built `generate.m` (~310 lines): load checkpoint, 3 ANE kernels, autoregressive generation
+- Tiny-ANE-15M (loss 2.35): 3.2 tok/s, semi-coherent
+- Stories-110M (loss 3.00): 4.0 tok/s, has structure but too much noise at this loss level
+
+**Files created:**
+- `training/training_dynamic/generate.m` — text generation with ANE inference

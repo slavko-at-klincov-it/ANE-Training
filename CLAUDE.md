@@ -38,7 +38,7 @@ cd training && make <target>          # Build specific training target
 - **Sustained Single-Kernel: 5.01 TFLOPS** (continuous eval, one kernel shape).
 - **Real Training (Stories-110M): 2.15 TFLOPS** (80.9 ms/step, pipeline parallel).
 - **Sequential Training: 1.87 TFLOPS** (93 ms/step, without pipeline).
-- **Training converges**: Stories-110M loss 9.72→3.40 (10K steps, 1B tokens, ~35 min on M3 Pro). Tiny-ANE-15M loss 9.66→2.54 (20K steps).
+- **Training converges**: Stories-110M loss 9.72→3.00 best (50K steps, 1B tokens, diverges to NaN at 45K). Tiny-ANE-15M loss 9.66→2.54 (20K steps).
 - Peak numbers are benchmark-only — real training is ~6x lower due to per-layer dispatch, IOSurface I/O, and CPU gradients.
 - **Thermal: always Nominal** — ANE never throttles under sustained compute load.
 
@@ -51,6 +51,7 @@ cd training && make <target>          # Build specific training target
 - **ANE backward without loss scaling** — FP16 underflow zeros all gradients (see below)
 - **CPU rmsnorm_bwd with w[i] on full expression** — old code had `dx = w[i] * rrms * (dy - x*dot)` which applies RMSNorm weight to the correction term. Correct: `dx = rrms * (w[i]*dy - x*dot)`. Bug is invisible at init (w=1.0) but corrupts gradients once RMSNorm weights train away from 1.0. Fixed in both `cpu_ops.h` and `stories_cpu_ops.h`. ANE MIL version (`ane_rmsnorm_bwd.h`) was already correct.
 - **Activation explosion with res_alpha + Adam** — residual scaling `1/sqrt(2*NLAYERS)` combined with Adam's normalized steps (each ≈±lr) causes weights to grow unbounded. After 5000 steps, x_cur reaches [-800, 600+], attenuating gradients through RMSNorm to ~1e-3. **Fixed by removing res_alpha (standard residual) + GPT-2 style init (Wo, W2 scaled by 1/sqrt(NLAYERS)).**
+- **Long training activation explosion** — even without res_alpha, activations grow to thousands over 25K+ steps with Adam. Stories-110M diverges to NaN at step 45K. Need lower LR (1e-4), weight clipping, or activation clamping for stable long runs.
 - **ACCUM_STEPS < 100** — 86 kernels per batch vs ~119 compile limit = only 1 batch per exec()
 - **Rapid exec() restart loops** — poisons ANE daemon system-wide, requires reboot
 - **Small kernel dims (D<128)** — ANE error 0x1d (Program Inference error)
