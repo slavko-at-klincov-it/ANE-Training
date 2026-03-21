@@ -38,6 +38,7 @@ cd training && make <target>          # Build specific training target
 - **Sustained Single-Kernel: 5.01 TFLOPS** (continuous eval, one kernel shape).
 - **Real Training (Stories-110M): 2.15 TFLOPS** (80.9 ms/step, pipeline parallel).
 - **Sequential Training: 1.87 TFLOPS** (93 ms/step, without pipeline).
+- **Training converges**: Stories-110M loss 9.72→3.40 (10K steps, 1B tokens, ~35 min on M3 Pro). Tiny-ANE-15M loss 9.66→2.54 (20K steps).
 - Peak numbers are benchmark-only — real training is ~6x lower due to per-layer dispatch, IOSurface I/O, and CPU gradients.
 - **Thermal: always Nominal** — ANE never throttles under sustained compute load.
 
