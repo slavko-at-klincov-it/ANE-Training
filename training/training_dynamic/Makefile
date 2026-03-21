@@ -25,7 +25,13 @@ sweep: $(addprefix train_,$(SWEEP_MODELS))
 	@echo ""
 	@bash sweep_models.sh
 
+# Generate binary for a specific model
+generate_%: generate.m config.h io.h cpu_ops.h mil_dynamic.h models/%.h
+	@echo "Building generate for model: $*"
+	$(CC) $(CFLAGS) -include models/$*.h -o generate_$* generate.m
+
 clean:
 	rm -f train train_tiny_ane train_small_ane train_medium_ane train_wide_ane
+	rm -f generate_tiny_ane generate_small_ane generate_medium_ane generate_wide_ane generate_stories110m
 
 .PHONY: clean sweep
