@@ -2,7 +2,7 @@
 // Replaces CPU rmsnorm_bwd() from stories_cpu_ops.h
 //
 // RMSNorm forward:  xn = x * rrms * w,  where rrms = 1/sqrt(mean(x²) + eps)
-// RMSNorm backward: dx = w * rrms * (dy - x * sum(dy*w*x) * invd * rrms²)
+// RMSNorm backward: dx = rrms * (w * dy - x * sum(dy*w*x) * invd * rrms²)
 //
 // Input:  concat(dy, x) as [1, 2*DIM, 1, SEQ]
 // Baked:  RMSNorm weights w [1, DIM, 1, 1] as BLOBFILE

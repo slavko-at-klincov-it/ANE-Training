@@ -40,10 +40,11 @@ static void rmsnorm_bwd(float *dx, float *dw, const float *dy, const float *x, c
     vDSP_vsmul(ss, 1, &invd, ss, 1, (vDSP_Length)S);
     vDSP_vmul(dot, 1, ss, 1, dot, 1, (vDSP_Length)S);
     for (int i=0; i<d; i++) {
-        vDSP_vmul(x+i*S, 1, dot, 1, rms_tmp, 1, (vDSP_Length)S);
-        vDSP_vsub(rms_tmp, 1, dy+i*S, 1, rms_tmp, 1, (vDSP_Length)S);
-        vDSP_vmul(rms_tmp, 1, rrms, 1, rms_tmp, 1, (vDSP_Length)S);
-        vDSP_vsmul(rms_tmp, 1, &w[i], dx+i*S, 1, (vDSP_Length)S);
+        // dx[i] = rrms * (w[i] * dy[i] - x[i] * dot)
+        vDSP_vsmul(dy+i*S, 1, &w[i], dx+i*S, 1, (vDSP_Length)S);       // dx = w[i] * dy[i]
+        vDSP_vmul(x+i*S, 1, dot, 1, rms_tmp, 1, (vDSP_Length)S);       // tmp = x[i] * dot
+        vDSP_vsub(rms_tmp, 1, dx+i*S, 1, dx+i*S, 1, (vDSP_Length)S);   // dx = w[i]*dy[i] - x[i]*dot
+        vDSP_vmul(dx+i*S, 1, rrms, 1, dx+i*S, 1, (vDSP_Length)S);      // dx *= rrms
         vDSP_vmul(dy+i*S, 1, x+i*S, 1, rms_tmp, 1, (vDSP_Length)S);
         vDSP_vmul(rms_tmp, 1, rrms, 1, rms_tmp, 1, (vDSP_Length)S);
         float s; vDSP_sve(rms_tmp, 1, &s, (vDSP_Length)S);

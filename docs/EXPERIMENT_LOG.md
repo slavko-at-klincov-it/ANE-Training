@@ -2,7 +2,7 @@
 **Date:** 2026-03-20
 **Branch:** experiment/3h-optimize-session
 **Baseline:** 77 ms/step, 2.26 TFLOPS, 0% overlap, loss flat at ~10.43
-**Status:** 11 investigation rounds completed. Main bug (FP16 underflow) found and fixed.
+**Status:** 12 investigation rounds completed. Two bugs found: FP16 underflow (Round 10) and rmsnorm_bwd w[i] placement (Round 12).
 **NOTE:** ANE compile budget exhausted during experiments — **reboot required** to recover.
 
 ## What Works
@@ -15,13 +15,16 @@
 - **ffnBwd kernel works in isolation** — verified at full DIM=768/HIDDEN=2048/SEQ=256
 - **Zero SRAM spills** — ANE tiles 1x1 convs automatically (204 configs tested)
 - **RoPE MIL implementation exists** in training_dynamic/mil_dynamic.h (ready to port)
+- **Gradient direction verified correct** — numerical gradient check confirms backward produces loss-reducing gradients (verified with SGD at lr 1e-5 to 1.0)
 
 ## What Doesn't Work
 - ~~Loss not decreasing~~ → **FIXED by loss scaling** (gradients non-zero, slow convergence)
+- ~~CPU rmsnorm_bwd had wrong w[i] placement~~ → **FIXED** (Round 12)
 - Pipeline overlap = 0% (measurement bug + design limitation)
 - Missing RoPE in SDPA kernels (limits model quality)
 - **ANE compile budget is SYSTEM-WIDE** — rapid exec() loops poison the daemon, requires reboot
 - Cannot reduce ACCUM_STEPS below ~100 (86 kernels per batch vs ~119 compile limit)
+- **Activation explosion** — x_cur grows to [-800, 600] over 5000 steps with res_alpha + Adam, attenuating all gradients
 
 ## Confirmed Bugs
 
@@ -296,3 +299,63 @@ All sizes from D=128 upward work.
 With 86-99 kernels per batch, we can only do 1 batch per exec() cycle.
 To get more Adam updates, we need to reduce KERNELS_PER_LAYER (fewer backward kernels)
 or find a way to share kernels across layers.
+
+### Round 12 — RMSNorm Backward Bug + Convergence Investigation (COMPLETE)
+**Date:** 2026-03-21
+**Branch:** experiment/3h-optimize-session
+**Method:** Full backward pass code review + CPU-only gradient verification
+
+**Bug found: CPU `rmsnorm_bwd` applies w[i] to the entire gradient expression**
+
+Both `cpu_ops.h` and `stories_cpu_ops.h` had the wrong formula:
+```
+Old: dx[i] = w[i] * rrms * (dy[i] - x[i] * dot)     ← w[i] wraps BOTH terms
+New: dx[i] = rrms * (w[i] * dy[i] - x[i] * dot)     ← w[i] only on dy term
+```
+
+The ANE MIL version (`ane_rmsnorm_bwd.h`) was already correct — it computes
+`dx = (dy*w - x*coeff) * rrms` which correctly limits w to the dy term.
+
+**Impact assessment:**
+- At initialization (w[i]=1.0 for all i), old and new code produce IDENTICAL results
+- The bug only manifests after RMSNorm weights train away from 1.0
+- Once w[i] ≠ 1.0, the correction term (which keeps gradients orthogonal to the
+  normalization manifold) gets distorted by per-dimension w[i] scaling
+- This corrupts gradient direction without changing magnitude much, explaining
+  why gradients appeared "healthy" but didn't converge
+
+**Gradient verification (CPU-only, no ANE):**
+- Numerical gradient check confirms gradient direction is correct after fix
+- SGD with computed gradient reduces loss at all learning rates tested (1e-5 to 1.0)
+- Single step with lr=1.0: loss 10.40 → 8.69 (embedding-only model)
+- Full model with transformer: SGD on 100 embed elements reduces loss by 2.97e-4
+
+**Remaining convergence challenge: activation explosion**
+- With Stories-110M (12 layers, dim=768), `x_cur` grows from [-0.13, 0.16] (step 0)
+  to [-858, 647] (step 4990) — a ~5000x increase
+- RMSNorm compensates by scaling rrms down to ~1/800, attenuating gradients (dy ~1e-3)
+- Root cause: `res_alpha = 1/sqrt(2*NLAYERS)` combined with Adam's normalized steps
+  (each ≈ ±lr per element) allows weights to grow unboundedly
+- The loss on Stories-110M stays at ~10.3-10.5 over 5000 steps (no clear trend)
+- Tiny-ANE-15M with 5000 steps at lr=3e-4 also shows no clear trend
+
+**Why models appear stuck at ln(V):**
+1. rmsnorm_bwd bug (fixed) — corrupts gradients once w trains away from 1.0
+2. Activation explosion — attenuates gradients through deep networks
+3. Large vocab (32K) with small dim (256-768) — loss landscape is nearly flat w.r.t.
+   transformer weights at initialization (verified: numerical gradient of Wq ≈ 0 with eps=1e-4)
+4. Small data (500K tokens) — insufficient for 13-110M param models
+
+**Files changed:**
+- `training/training_dynamic/cpu_ops.h` — fixed rmsnorm_bwd dx computation
+- `training/stories_cpu_ops.h` — same fix (used by train_pipeline, train_large, etc.)
+- `training/ane_rmsnorm_bwd.h` — comment fix (code was already correct)
+- `CLAUDE.md` — documented rmsnorm_bwd bug and activation explosion in "What Doesn't Work"
+
+**Next steps to achieve convergence:**
+1. Address activation explosion: remove res_alpha (use standard x + layer_output),
+   or use muP-style initialization, or add explicit weight norm constraints
+2. Start with smaller vocab: use a byte-level tokenizer (256 tokens) or char-level
+3. More training data: 500K tokens is ~1000x too small for 110M params
+4. Hyperparameter sweep: try lr=1e-4, wd=0.01, beta2=0.999 (more conservative)
+5. Run 50000+ steps (5000+ Adam updates) to see through batch-to-batch noise
