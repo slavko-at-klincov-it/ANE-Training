@@ -52,6 +52,7 @@ cd training && make <target>          # Build specific training target
 - **CPU rmsnorm_bwd with w[i] on full expression** — old code had `dx = w[i] * rrms * (dy - x*dot)` which applies RMSNorm weight to the correction term. Correct: `dx = rrms * (w[i]*dy - x*dot)`. Bug is invisible at init (w=1.0) but corrupts gradients once RMSNorm weights train away from 1.0. Fixed in both `cpu_ops.h` and `stories_cpu_ops.h`. ANE MIL version (`ane_rmsnorm_bwd.h`) was already correct.
 - **Activation explosion with res_alpha + Adam** — residual scaling `1/sqrt(2*NLAYERS)` combined with Adam's normalized steps (each ≈±lr) causes weights to grow unbounded. After 5000 steps, x_cur reaches [-800, 600+], attenuating gradients through RMSNorm to ~1e-3. **Fixed by removing res_alpha (standard residual) + GPT-2 style init (Wo, W2 scaled by 1/sqrt(NLAYERS)).**
 - **Long training activation explosion** — even without res_alpha, activations grow to thousands over 25K+ steps with Adam. Stories-110M diverges to NaN at step 45K. Need lower LR (1e-4), weight clipping, or activation clamping for stable long runs.
+- **Qwen3-0.6B on 18GB M3 Pro** — compiles and learns (loss 9.70→8.81 in 20 steps) but OOM-killed after ~20 steps. Needs ~11GB RAM, too tight with macOS overhead on 18GB. Needs 32GB+ Mac or reduced batch/seq size.
 - **ACCUM_STEPS < 100** — 86 kernels per batch vs ~119 compile limit = only 1 batch per exec()
 - **Rapid exec() restart loops** — poisons ANE daemon system-wide, requires reboot
 - **Small kernel dims (D<128)** — ANE error 0x1d (Program Inference error)
