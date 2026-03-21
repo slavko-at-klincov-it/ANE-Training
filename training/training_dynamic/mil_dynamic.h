@@ -276,11 +276,8 @@ static NSString *gen_ffn_fused_dynamic(void) {
     [m appendFormat:@"        tensor<int32, [4]> rd2 = const()[name=string(\"rd2\"), val=tensor<int32, [4]>([1,%d,1,%d])];\n", DIM, SEQ];
     [m appendFormat:@"        tensor<fp16, [1,%d,1,%d]> ffn_out = reshape(shape=rd2,x=ft)[name=string(\"ffn_out\")];\n", DIM, SEQ];
 
-    // Residual: x_next = x2 + alpha * ffn_out
-    float alpha = 1.0f / sqrtf(2.0f * NLAYERS);
-    [m appendFormat:@"        fp16 res_alpha = const()[name=string(\"res_alpha\"), val=fp16(%g)];\n", alpha];
-    [m appendFormat:@"        tensor<fp16, [1,%d,1,%d]> ffn_scaled = mul(x=ffn_out,y=res_alpha)[name=string(\"ffn_sc\")];\n", DIM, SEQ];
-    [m appendFormat:@"        tensor<fp16, [1,%d,1,%d]> x_next = add(x=x2,y=ffn_scaled)[name=string(\"x_next\")];\n", DIM, SEQ];
+    // Residual: x_next = x2 + ffn_out (standard, no scaling)
+    [m appendFormat:@"        tensor<fp16, [1,%d,1,%d]> x_next = add(x=x2,y=ffn_out)[name=string(\"x_next\")];\n", DIM, SEQ];
 
     // Output: concat(x_next, h1, h3, gate)
     [m appendString:@"        int32 cax = const()[name=string(\"cax\"), val=int32(1)];\n"];

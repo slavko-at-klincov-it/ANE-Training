@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
         int warmup_steps = 100;
         float grad_clip = 1.0f;
         float loss_scale = 256.0f;
-        float res_alpha = 1.0f / sqrtf(2.0f * NLAYERS);
+        float res_alpha = 1.0f;  // Standard residual (no scaling)
         float min_lr_frac = 0.1f;
 
         bool do_resume = false, from_scratch = false;
@@ -242,14 +242,15 @@ int main(int argc, char *argv[]) {
                 printf("  Training from scratch (random init)\n");
                 srand48(42);
                 float scale_d=1.0f/sqrtf(DIM), scale_qd=1.0f/sqrtf(Q_DIM), scale_h=1.0f/sqrtf(HIDDEN);
-                float res_scale = 1.0f/sqrtf(2.0f*NLAYERS);
+                // GPT-2 style init: output projections (Wo, W2) scaled by 1/sqrt(NLAYERS)
+                float out_scale = 1.0f/sqrtf((float)NLAYERS);
                 for (int L=0; L<NLAYERS; L++) {
                     for(size_t i=0;i<WQ_SZ;i++) lw[L].Wq[i]=scale_d*(2*drand48()-1);
                     for(size_t i=0;i<WK_SZ;i++) lw[L].Wk[i]=scale_d*(2*drand48()-1);
                     for(size_t i=0;i<WV_SZ;i++) lw[L].Wv[i]=scale_d*(2*drand48()-1);
-                    for(size_t i=0;i<WO_SZ;i++) lw[L].Wo[i]=scale_qd*res_scale*(2*drand48()-1);
+                    for(size_t i=0;i<WO_SZ;i++) lw[L].Wo[i]=scale_qd*out_scale*(2*drand48()-1);
                     for(size_t i=0;i<W1_SZ;i++) lw[L].W1[i]=scale_h*(2*drand48()-1);
-                    for(size_t i=0;i<W2_SZ;i++) lw[L].W2[i]=scale_d*res_scale*(2*drand48()-1);
+                    for(size_t i=0;i<W2_SZ;i++) lw[L].W2[i]=scale_d*out_scale*(2*drand48()-1);
                     for(size_t i=0;i<W3_SZ;i++) lw[L].W3[i]=scale_h*(2*drand48()-1);
                     for(int i=0;i<DIM;i++){lw[L].rms_att[i]=1.0f; lw[L].rms_ffn[i]=1.0f;}
                 }
@@ -803,6 +804,16 @@ int main(int argc, char *argv[]) {
                     }
                     printf("  grad_norm=%.4f  attn=%.4f ffn=%.4f embed=%.4f\n",
                            grad_norm, sqrtf(attn_sq), sqrtf(ffn_sq), sqrtf(embed_sq));
+                    // Per-layer gradient norms (first, middle, last)
+                    int layers_to_show[] = {0, NLAYERS/2, NLAYERS-1};
+                    for (int li=0; li<3; li++) {
+                        int L = layers_to_show[li]; LayerGrads *g = &grads[L]; float s, lsq=0;
+                        vDSP_dotpr(g->Wq,1,g->Wq,1,&s,(vDSP_Length)WQ_SZ); lsq+=s;
+                        vDSP_dotpr(g->Wo,1,g->Wo,1,&s,(vDSP_Length)WO_SZ); lsq+=s;
+                        vDSP_dotpr(g->W2,1,g->W2,1,&s,(vDSP_Length)W2_SZ); lsq+=s;
+                        printf("    L%d: |g|=%.4f", L, sqrtf(lsq));
+                    }
+                    printf("\n");
                 }
 
                 // Gradient clipping

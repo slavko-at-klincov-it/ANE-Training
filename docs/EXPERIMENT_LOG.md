@@ -353,9 +353,51 @@ The ANE MIL version (`ane_rmsnorm_bwd.h`) was already correct — it computes
 - `CLAUDE.md` — documented rmsnorm_bwd bug and activation explosion in "What Doesn't Work"
 
 **Next steps to achieve convergence:**
-1. Address activation explosion: remove res_alpha (use standard x + layer_output),
-   or use muP-style initialization, or add explicit weight norm constraints
+1. ~~Address activation explosion~~ → **DONE** (Round 12b below)
 2. Start with smaller vocab: use a byte-level tokenizer (256 tokens) or char-level
 3. More training data: 500K tokens is ~1000x too small for 110M params
 4. Hyperparameter sweep: try lr=1e-4, wd=0.01, beta2=0.999 (more conservative)
 5. Run 50000+ steps (5000+ Adam updates) to see through batch-to-batch noise
+
+### Round 12b — Activation Explosion Fix + First Convergence (COMPLETE)
+**Date:** 2026-03-21
+**Method:** Remove res_alpha scaling, GPT-2 style output projection init
+
+**Changes:**
+1. Removed `res_alpha = 1/sqrt(2*NLAYERS)` — set to 1.0 (standard residual: `x + layer_output`)
+2. GPT-2 style init: output projections (Wo, W2) scaled by `1/sqrt(NLAYERS)` instead of `1/sqrt(2*NLAYERS)`
+3. Removed baked res_alpha from FFN fused MIL kernel (was `x2 + alpha*ffn_out`, now `x2 + ffn_out`)
+4. Added per-layer gradient norm tracking (L0, Lmid, Llast)
+
+**Results — Tiny-ANE-15M, 10K steps, accum=10, lr=3e-4:**
+```
+Step    Loss     x_range         Notes
+   0    10.37   [-1.0, 1.1]     Random baseline (ln(32K)=10.37)
+1000    10.29   [-3.1, 3.4]     Warmup complete
+2000    10.41                    Batch noise
+3000    10.30
+4000    10.32
+5000    10.27                    Clear downward trend
+6000    10.01                    Breaking away from baseline!
+7000     9.97   [-3.1, 3.4]     Best loss — 0.40 below baseline
+8000    10.13
+9000    10.19
+9950     9.94                    Loss still improving at end
+```
+
+**Key improvements vs previous:**
+- Activations: x stays at [-3, 4] (was [-800, 600] with res_alpha)
+- Loss: 10.37 → 9.94 (was stuck at 10.4 indefinitely)
+- Gradient flow: stable across all layers (L0=0.08, L3=0.01, L5=0.01)
+- Training speed: 103.6 ms/step, 17.6 min wall for 10K steps
+
+**Why lr=1e-3 doesn't work:**
+- Tried lr=1e-3 with warmup=200: activations still explode to [-446, 3870]
+- The standard residual (no scaling) amplifies each layer's output more,
+  making the model more sensitive to learning rate
+- lr=3e-4 is the right range for this architecture
+
+**Files changed:**
+- `training/training_dynamic/train.m` — res_alpha=1.0, GPT-2 init, per-layer grad norms
+- `training/training_dynamic/mil_dynamic.h` — removed baked alpha from FFN fused kernel
+- `CLAUDE.md` — updated findings
