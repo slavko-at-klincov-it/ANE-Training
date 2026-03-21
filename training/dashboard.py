@@ -203,8 +203,6 @@ def generate_text(W, max_tokens=64, temperature=0.8):
     k_cache = [[np.zeros((0, HD), dtype=np.float32) for _ in range(KV_HEADS)] for _ in range(NLAYERS)]
     v_cache = [[np.zeros((0, HD), dtype=np.float32) for _ in range(KV_HEADS)] for _ in range(NLAYERS)]
 
-    res_alpha = 1.0 / math.sqrt(2.0 * NLAYERS)
-
     for step in range(max_tokens):
         seq_len = len(tokens)
         if seq_len > SEQ:
@@ -252,7 +250,7 @@ def generate_text(W, max_tokens=64, temperature=0.8):
                 o[h * HD:(h + 1) * HD] = attn @ v_cache[L][kv]
 
             # Residual + output projection
-            x2 = x + res_alpha * (W[f'Wo{L}'] @ o)
+            x2 = x + (W[f'Wo{L}'] @ o)
 
             # FFN
             x2n = rmsnorm(x2, W[f'rms2_{L}'])
@@ -261,7 +259,7 @@ def generate_text(W, max_tokens=64, temperature=0.8):
             h1 = h1 * (1.0 / (1.0 + np.exp(-h1))) * h3
             ffn_out = W[f'W2_{L}'] @ h1
 
-            x = x2 + res_alpha * ffn_out
+            x = x2 + ffn_out
 
         x = rmsnorm(x, W['rms_final'])
 
