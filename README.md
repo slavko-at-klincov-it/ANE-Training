@@ -23,36 +23,37 @@
 
 <br>
 
-> Train AI models on the Neural Engine — **while your GPU stays free for other work.**
+> **ANE-accelerated training** — the compute-heavy operations (attention, projections, FFN) run on the Neural Engine. The GPU stays free for other work.
 >
-> The first standalone C API (`libane`) for Apple's private Neural Engine. Apple restricts the ANE to inference via CoreML. This project unlocks **training** — running in the background on a dedicated chip that doesn't block your GPU, CPU, or battery.
+> The first standalone C API (`libane`) for Apple's private Neural Engine. Apple restricts the ANE to inference via CoreML. This project unlocks **training** — using the ANE as a dedicated accelerator for the expensive matrix multiplications, while CPU handles optimizer and normalization in FP32.
 
 > [!IMPORTANT]
-> **The goal is not to beat the GPU on throughput.** MLX/Metal is faster for pure training. The goal is to use the ANE as a **dedicated, independent training accelerator** — so you can train a model while editing video, rendering 3D, or gaming. No competition for GPU resources.
+> **The goal is not to beat the GPU on throughput.** MLX/Metal is faster for pure training. The goal is to use the ANE as a **dedicated training accelerator** — so you can train a model while editing video, rendering 3D, or gaming. No competition for GPU resources.
 >
 > **This IS:**
 > - Direct access to Apple's **private ANE API** (76 classes discovered, 35 exposed via libane)
-> - **Background training** on a dedicated chip — GPU, CPU, and battery stay free
+> - **ANE-accelerated training** — weight matmuls (QKV, attention, FFN) on ANE (~40% of compute), optimizer/normalization on CPU in FP32 (~45%), IOSurface data transfer (~15%)
 > - **FP16 native compute** — 12.8 TFLOPS ANE peak, 2.15 TFLOPS real training throughput
 > - **1 compile → unlimited training steps** via Dynamic Spatial Packing
+> - **GPU stays free** — no Metal, no MPS. ANE + CPU only. (Note: Apple's Accelerate BLAS may use AMX/GPU for large matrix ops internally)
 >
 > **This is NOT:**
 > - A GPU competitor — MLX is faster for throughput, we're faster at staying out of the way
 > - CoreML / Metal / MLX — we bypass Apple's public frameworks entirely
-> - CPU training — forward/backward runs on the Neural Engine, not on your CPU cores
+> - Pure ANE training — RMSNorm, Adam (FP32), gradient accumulation, and loss computation run on CPU. ANE handles the heavy matmuls.
 
 ---
 
 ## Use Cases
 
-> The ANE is a **dedicated chip that sits idle** on every Mac. This project puts it to work — training in the background while your GPU, CPU, and battery stay free.
+> The ANE is a **dedicated chip that sits idle** on every Mac. This project puts it to work — the ANE handles the expensive matmuls while your GPU stays free.
 
 | Use Case | What Happens |
 |:---|:---|
-| **Continuous Learning** | ANE trains on your daily data (code, docs, emails) while you work. Your personal AI gets smarter every day — without you noticing. |
+| **Continuous Learning** | ANE accelerates training on your daily data (code, docs, emails) while you work. Your personal AI gets smarter every day — without you noticing. |
 | **Overnight Fine-Tuning** | Start before bed, MacBook charges, ANE trains. Morning: your model knows your codebase, your writing style, your patterns. |
 | **100% Private** | Data never leaves your device. No cloud, no API calls, no account. Everything stays on your Mac. |
-| **Zero Impact** | GPU renders, CPU compiles, ANE trains. No battery drain, no fan noise, no slowdown. |
+| **Low Impact** | GPU renders, ANE handles matmuls, CPU handles optimizer. No fan noise, no GPU competition. |
 
 **Throughput** (Tiny-ANE 13M, M3 Pro): `12.6 steps/sec` · `11.5M tokens/hour` · `92M tokens overnight (8h)`
 

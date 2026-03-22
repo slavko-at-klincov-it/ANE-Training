@@ -239,7 +239,12 @@ int main(int argc, char *argv[]) {
             double embed_m = (double)VOCAB*DIM / 1e6;
             printf("Params: %.1fM (transformer %.1fM + embed %.1fM)\n", xformer_m+embed_m, xformer_m, embed_m);
             printf("Kernels: 10 compiled (sdpaFwd+woFwd, ffnFused, ffnBwdW2t+W13t, wotBwd, sdpaBwd1+2, qBwd+kvBwd)\n");
-            printf("Accum %d steps, LR=%g\n", accum_steps, max_lr);
+            printf("Accum %d steps, LR=%g", accum_steps, max_lr);
+            if (max_act > 0) printf(", maxact=%.0f", max_act);
+            if (max_wnorm > 0) printf(", wnorm=%.0f", max_wnorm);
+            printf("\n");
+            printf("Hardware: ANE (matmuls via MIL kernels) + CPU (RMSNorm, SiLU, Adam, BLAS dW)\n");
+            printf("  Note: Accelerate BLAS (cblas_sgemm) may use GPU/AMX for classifier + dW ops\n");
             double fwd_flops = 2.0*NLAYERS*((double)WQ_SZ + WK_SZ + WV_SZ + WO_SZ + W1_SZ + W2_SZ + W3_SZ) * SEQ;
             double total_flops = 3.0 * fwd_flops;
             printf("FLOPs/step: fwd=%.1fM total=%.1fM\n", fwd_flops/1e6, total_flops/1e6);
@@ -412,6 +417,7 @@ int main(int argc, char *argv[]) {
 
             double t_rms=0, t_ane_fwd=0, t_io_fwd=0, t_cblas_wait=0;
             double t_ane_bwd=0, t_io_bwd=0, t_silu=0, t_rms_bwd=0, t_cls=0, t_dw_copy=0;
+            double t_dw_blas=0;  // actual BLAS time for dW accumulation
 
             // ===== FORWARD (28 layers) =====
             for (int L=0; L<NLAYERS; L++) {
@@ -741,8 +747,11 @@ int main(int argc, char *argv[]) {
             total_steps_done++;
 
             if (step % 10 == 0 || step == start_step) {
-                printf("  timing: ane_fwd=%.1f io_fwd=%.1f rms=%.1f ane_bwd=%.1f io_bwd=%.1f silu=%.1f rms_bwd=%.1f cls=%.1f cblas_wait=%.1f dw_copy=%.1f\n",
-                       t_ane_fwd, t_io_fwd, t_rms, t_ane_bwd, t_io_bwd, t_silu, t_rms_bwd, t_cls, t_cblas_wait, t_dw_copy);
+                double hw_ane = t_ane_fwd + t_ane_bwd;
+                double hw_cpu = t_rms + t_silu + t_rms_bwd + t_cls + t_dw_copy;
+                double hw_io = t_io_fwd + t_io_bwd;
+                printf("  hardware: ANE=%.1fms  CPU=%.1fms  IO=%.1fms  (ane_f=%.1f ane_b=%.1f rms=%.1f silu=%.1f cls=%.1f)\n",
+                       hw_ane, hw_cpu, hw_io, t_ane_fwd, t_ane_bwd, t_rms+t_rms_bwd, t_silu, t_cls);
                 float xmx, xmn;
                 vDSP_maxv(x_cur,1,&xmx,(vDSP_Length)(SEQ*DIM));
                 vDSP_minv(x_cur,1,&xmn,(vDSP_Length)(SEQ*DIM));
