@@ -3,6 +3,7 @@
 // Compile kernels ONCE at startup, update weights via IOSurface every step.
 #include "mil_dynamic.h"
 #include "cpu_ops.h"
+#include "hw_monitor.h"
 
 // Dynamic kernel set per layer
 typedef struct {
@@ -362,6 +363,9 @@ int main(int argc, char *argv[]) {
             stage_kv_bwd_weights(pls[L].kvBwd_in, lw[L].Wk, lw[L].Wv);
         }
         printf("Per-layer weight staging complete\n\n");
+
+        // Start hardware monitor (1s interval, CSV log)
+        hw_monitor_start(1000, "hw_log.csv");
 
         // Gradient + work buffers (GQA: Q has Q_DIM, K/V have KV_DIM)
         float *dy = (float*)malloc(SEQ*DIM*4);
@@ -746,6 +750,14 @@ int main(int argc, char *argv[]) {
             total_train_ms += step_ms;
             total_steps_done++;
 
+            // Record hardware metrics for this step
+            {
+                double hw_ane = t_ane_fwd + t_ane_bwd;
+                double hw_cpu = t_rms + t_silu + t_rms_bwd + t_cls + t_dw_copy;
+                double hw_io = t_io_fwd + t_io_bwd;
+                hw_monitor_record_step(step, last_loss, hw_ane, hw_cpu, hw_io);
+            }
+
             if (step % 10 == 0 || step == start_step) {
                 double hw_ane = t_ane_fwd + t_ane_bwd;
                 double hw_cpu = t_rms + t_silu + t_rms_bwd + t_cls + t_dw_copy;
@@ -921,6 +933,9 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
+
+        // Stop hardware monitor and print summary
+        hw_monitor_stop();
 
         // Report
         double wall = tb_ms(mach_absolute_time() - t_wall_start);

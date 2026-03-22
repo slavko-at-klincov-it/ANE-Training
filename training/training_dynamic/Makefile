@@ -1,5 +1,6 @@
 CC = xcrun clang
 CFLAGS = -O2 -DACCELERATE_NEW_LAPACK -framework Foundation -framework IOSurface -framework Accelerate \
+         -framework Metal -framework IOKit \
          -isysroot $(shell xcrun --show-sdk-path) -fobjc-arc
 
 # Model selection: make MODEL=stories110m
@@ -10,12 +11,12 @@ MODEL_HDR = models/$(MODEL).h
 # ANE-optimized models for sweep (excludes large qwen3_06b and stories110m)
 SWEEP_MODELS = tiny_ane small_ane medium_ane wide_ane
 
-train: train.m config.h io.h cpu_ops.h mil_dynamic.h $(MODEL_HDR)
+train: train.m config.h io.h cpu_ops.h mil_dynamic.h hw_monitor.h $(MODEL_HDR)
 	@echo "Building for model: $(MODEL)"
 	$(CC) $(CFLAGS) -include $(MODEL_HDR) -o train train.m
 
 # Build a specific model into train_<model>
-train_%: train.m config.h io.h cpu_ops.h mil_dynamic.h models/%.h
+train_%: train.m config.h io.h cpu_ops.h mil_dynamic.h hw_monitor.h models/%.h
 	@echo "Building for model: $*"
 	$(CC) $(CFLAGS) -include models/$*.h -o train_$* train.m
 
