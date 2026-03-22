@@ -65,6 +65,17 @@ static void adam_update(float *w, const float *g, AdamState *s, int t, float lr,
     }
 }
 
+// Clamp weight matrix norm: if ||W||_F > max_norm, scale W down
+static void weight_norm_clamp(float *w, size_t n, float max_norm) {
+    float norm_sq;
+    vDSP_dotpr(w, 1, w, 1, &norm_sq, (vDSP_Length)n);
+    float norm = sqrtf(norm_sq);
+    if (norm > max_norm) {
+        float scale = max_norm / norm;
+        vDSP_vsmul(w, 1, &scale, w, 1, (vDSP_Length)n);
+    }
+}
+
 // Cross-entropy loss: operates on logits[V, S] column-major (each column = one token)
 // Avoids transposing by using a per-token temp buffer
 static float cross_entropy_loss(float *dlogits, const float *logits, const uint16_t *targets, int V, int S) {

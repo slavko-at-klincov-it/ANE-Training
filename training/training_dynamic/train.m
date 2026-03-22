@@ -186,6 +186,9 @@ int main(int argc, char *argv[]) {
         float grad_clip = 1.0f;
         float loss_scale = 256.0f;
         float res_alpha = 1.0f;  // Standard residual (no scaling)
+        float max_wnorm = 0.0f;  // Weight norm clamp for Wo/W2 (0 = disabled)
+        float max_act = 0.0f;   // Activation clamp for residual stream (0 = disabled)
+        float neg_max_act = 0.0f;
         float min_lr_frac = 0.1f;
 
         bool do_resume = false, from_scratch = false;
@@ -198,6 +201,8 @@ int main(int argc, char *argv[]) {
             else if (strcmp(argv[i], "--accum") == 0 && i+1<argc) accum_steps = atoi(argv[++i]);
             else if (strcmp(argv[i], "--warmup") == 0 && i+1<argc) warmup_steps = atoi(argv[++i]);
             else if (strcmp(argv[i], "--clip") == 0 && i+1<argc) grad_clip = atof(argv[++i]);
+            else if (strcmp(argv[i], "--wnorm") == 0 && i+1<argc) max_wnorm = atof(argv[++i]);
+            else if (strcmp(argv[i], "--maxact") == 0 && i+1<argc) { max_act = atof(argv[++i]); neg_max_act = -max_act; }
             else if (strcmp(argv[i], "--data") == 0 && i+1<argc) data_path = argv[++i];
         }
         float lr = max_lr;
@@ -481,6 +486,9 @@ int main(int argc, char *argv[]) {
                 cvt_f16_f32(ac->silu_out,ffn_out + off, HIDDEN*SEQ);
                 IOSurfaceUnlock(dk.ffnFused->ioOut, kIOSurfaceLockReadOnly, NULL);
                 t_io_fwd += tb_ms(mach_absolute_time() - t0);
+
+                // Clamp residual stream to prevent activation explosion
+                if (max_act > 0) vDSP_vclip(x_cur, 1, &neg_max_act, &max_act, x_cur, 1, (vDSP_Length)(SEQ*DIM));
             }
 
             // Final RMSNorm + classifier + loss (CPU)
@@ -856,6 +864,12 @@ int main(int argc, char *argv[]) {
                     adam_update(lw[L].W3, g->W3, &la[L].W3, adam_t, lr, adam_b1, adam_b2, adam_eps, wd);
                     adam_update(lw[L].rms_att, g->rms_att, &la[L].rms_att, adam_t, lr, adam_b1, adam_b2, adam_eps, 0.0f);
                     adam_update(lw[L].rms_ffn, g->rms_ffn, &la[L].rms_ffn, adam_t, lr, adam_b1, adam_b2, adam_eps, 0.0f);
+
+                    // Clamp output projection norms (Wo, W2 feed into residual stream)
+                    if (max_wnorm > 0) {
+                        weight_norm_clamp(lw[L].Wo, WO_SZ, max_wnorm);
+                        weight_norm_clamp(lw[L].W2, W2_SZ, max_wnorm);
+                    }
 
                     // Update transposed weight buffers
                     transpose_weight(Wqt_buf[L], lw[L].Wq, Q_DIM, DIM);
