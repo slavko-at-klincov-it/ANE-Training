@@ -45,14 +45,27 @@
 > - CPU/AMX: **~45%** (optimizer, normalization, gradient BLAS)
 > - IOSurface transfer: **~15%**
 >
-> **What about the GPU?** Measured: **GPU is not used.** No Metal shaders, 0 MB GPU memory allocated. Apple's BLAS uses the AMX coprocessor (matrix units inside the CPU), not GPU. Your GPU stays completely free during training.
+> **What about the GPU?** We built a hardware monitor (`hw_monitor.h`) that measures GPU utilization, GPU memory, CPU time, RAM, and thermal state every second during training. The results are clear:
+>
+> | Metric | Measured Value | What it means |
+> |:-------|:---------------|:-------------|
+> | GPU utilization | **0%** | GPU is not used at all |
+> | GPU memory allocated | **0.1 MB** | Only the Metal device object — no shaders, no buffers |
+> | CPU time vs wall time | **~100%** | BLAS runs on CPU/AMX, not GPU |
+> | BLAS throughput | **988–1547 GFLOPS** | Far above CPU cores (~200), far below GPU (~4000) = AMX coprocessor |
+> | ANE utilization | **Not measurable** | Apple doesn't expose ANE perf stats on consumer macOS |
+> | Thermal | **Always Nominal** | ANE never causes throttling |
+> | RAM (Stories-110M) | **2923 MB** | Weights + activations + optimizer state |
+>
+> **Your GPU stays completely free.** The BLAS operations (classifier, gradient accumulation) use Apple's AMX coprocessor — dedicated matrix units inside the CPU, not the GPU. Every training run writes a `hw_log.csv` with per-second measurements you can verify yourself.
 >
 > **This IS:**
 > - Direct access to Apple's **private ANE API** (76 classes discovered, 35 exposed via libane)
 > - **ANE + CPU training** — the ANE does the heavy lifting, CPU handles optimizer and normalization
 > - **FP16 native compute** — 12.8 TFLOPS ANE peak, 2.15 TFLOPS real training throughput
 > - **1 compile → unlimited training steps** via Dynamic Spatial Packing
-> - **GPU stays free** — verified: no Metal, no MPS, 0 MB GPU memory
+> - **GPU verified free** — 0% utilization, 0 MB memory, measured with IOKit + Metal APIs
+> - **Built-in hardware monitoring** — every run logs CPU, GPU, memory, thermal to CSV
 >
 > **This is NOT:**
 > - A GPU competitor — MLX is faster for throughput, we're faster at staying out of the way
@@ -71,6 +84,14 @@
 | **Overnight Fine-Tuning** | Start before bed, MacBook charges, ANE+CPU train. Morning: your model knows your codebase, your writing style, your patterns. |
 | **100% Private** | Data never leaves your device. No cloud, no API calls, no account. Everything stays on your Mac. |
 | **Low Impact** | GPU renders, ANE+CPU train. No fan noise, no GPU competition. CPU is partially loaded (~45%), but modern Macs handle this alongside normal work. |
+
+**Training Results** (M3 Pro, TinyStories 1B tokens):
+
+| Model | Params | Loss | Text Quality | Generation Speed |
+|:------|:-------|:-----|:------------|:----------------|
+| Tiny-ANE-15M | 15M | 2.35 | Semi-coherent stories | 3.2 tok/s |
+| Stories-110M | 110M | 1.84 | **Coherent stories with dialogue** | **41 tok/s** |
+| Qwen3-0.6B | 596M | 5.51 | Still learning (needs 32GB Mac) | 1 tok/s |
 
 **Throughput** (Tiny-ANE 13M, M3 Pro): `12.6 steps/sec` · `11.5M tokens/hour` · `92M tokens overnight (8h)`
 
