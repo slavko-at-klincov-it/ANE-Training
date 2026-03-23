@@ -12,7 +12,7 @@ All numbers measured on **M3 Pro (h15g)** with **Tiny-ANE 13M** parameters.
 
 | Metric | Value | Source |
 |:---|---:|:---|
-| Steps/second | **12.6** | Measured (79.4 ms/step, pipeline parallel) |
+| Steps/second | **12.6** | Measured (80.9 ms/step, pipeline parallel) |
 | Tokens/step | **256** | Sequence length (ctx_len) x batch_size |
 | Tokens/second | **3,226** | 12.6 steps/sec x 256 tokens |
 | Tokens/hour | **11.6M** | 3,226 x 3,600 |

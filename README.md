@@ -9,14 +9,14 @@
 
 ### Reverse-Engineering Apple's Neural Engine
 
-**1 Compile · Auto Peak Detection · 35 Private Classes · Zero Recompilation**
+**1 Compile · Auto Peak Detection · 76 Private Classes · Zero Recompilation**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/macOS_15+-111111.svg?logo=apple&logoColor=white)](https://www.apple.com/macos/)
 [![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1--M5-FF3B30.svg)](https://support.apple.com/en-us/116943)
 [![Compile](https://img.shields.io/badge/Compile-1x_for_∞_Steps-34C759.svg)](#dynamic-spatial-packing--the-breakthrough)
 [![TFLOPS](https://img.shields.io/badge/Peak-Auto_Detect-007AFF.svg)](#benchmark-results-m3-pro)
-[![Classes](https://img.shields.io/badge/ANE_Classes-35-FF9500.svg)](RESEARCH_ANE_COMPLETE.md)
+[![Classes](https://img.shields.io/badge/ANE_Classes-76_Discovered-FF9500.svg)](RESEARCH_ANE_COMPLETE.md)
 [![Deutsch](https://img.shields.io/badge/Deutsch-README__DE.md-lightgrey.svg)](README_DE.md)
 
 </div>
@@ -128,7 +128,7 @@ For the right workload (small models, continuous learning, background fine-tunin
 
 | | |
 |:--|:--|
-| `35` | Private API classes discovered (previously known: only 4) |
+| `76` | Private API classes discovered (previously known: only 4) |
 | `42%` | Faster with QoS Background instead of Default |
 | `auto` | Peak TFLOPS detected on startup (~1s) |
 | `1` | Compile is enough — unlimited training steps |
@@ -219,7 +219,7 @@ Interactive menu — builds everything automatically.
 ./ane bench          # Measure your ANE silicon peak
 ./ane train          # Training demo (Y=2X, 1 compile, 60 steps)
 ./ane generate       # Shakespeare text generation on ANE
-./ane explore        # Explore 35 ANE classes interactively
+./ane explore        # Explore 76 ANE classes interactively
 ./ane info           # Hardware detection
 ./ane test           # libane test suite
 ./ane monitor        # Deep ANE probe (thermal, device info, sustained)
@@ -293,7 +293,7 @@ On startup, `./ane` runs a quick peak measurement (~1s) and shows:
   + Hardware: h15g (M3 Pro), 16 cores
   + ANE Peak: 12.79 TFLOPS (18 TOPS Apple spec, 71%)
   + Real Training: ~2.15 TFLOPS (Stories-110M)
-  + API: v1(35)
+  + API: v1(76)
 ```
 
 </details>
@@ -326,10 +326,10 @@ Compiles used: 1 / 119
 
 &nbsp;
 
-All 35 ANE classes categorized, interactive inspection:
+All 76 ANE classes categorized, interactive inspection:
 
 ```
-Found 35 ANE classes
+Found 76 ANE classes
 
 ┌─ Core (Model compilation, loading, evaluation)
 │  █ _ANEInMemoryModel
@@ -778,6 +778,7 @@ ANE-Training/
 ├── training/ ·························· Training Pipeline
 │   ├── train_pipeline.m                 Pipeline Parallel (ANE Forward ‖ CPU Backward)
 │   ├── train_large_ane.m                ANE Training (sequential baseline)
+│   ├── training_dynamic/               Dynamic weight training (compile once, train unlimited)
 │   ├── dashboard.py                     TUI Dashboard (blessed + powermetrics)
 │   ├── stories_config.h                 Model config (Stories110M / Qwen3-0.6B)
 │   ├── forward.h / backward.h          Forward/backward pass implementations
@@ -790,6 +791,10 @@ ANE-Training/
 │   ├── ANE_COMPILER_OPTIONS.md         Runtime option keys, KeepMemoryWired
 │   ├── ANE_CHAINING.md                 Chaining = loopback, dispatch analysis
 │   └── ANE_BUFFER_SRAM.md             Buffer architecture, SRAM limits
+│
+├── ui/ ································ Web Dashboard (dark/light theme)
+│
+├── personal-ai/ ······················ Phase D: Personal AI Vision
 │
 ├── libane/ ···························· Core C API
 │   ├── ane.h                            ANE API (compile, eval, thermal, SRAM spill)
