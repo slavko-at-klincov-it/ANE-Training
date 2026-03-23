@@ -90,10 +90,16 @@
 | Model | Params | Loss | Text Quality | Generation Speed |
 |:------|:-------|:-----|:------------|:----------------|
 | Tiny-ANE-15M | 15M | 2.35 | Semi-coherent stories | 3.2 tok/s |
-| Stories-110M | 110M | 1.84 | **Coherent stories with dialogue** | **41 tok/s** |
-| Qwen3-0.6B | 596M | 5.51 | Still learning (needs 32GB Mac) | 1 tok/s |
+| Stories-110M | 110M | 1.86 | **Coherent stories with dialogue** | **41 tok/s** |
+| Qwen3-0.6B | 596M | 4.77 | Still learning (needs 32GB Mac) | 1 tok/s |
+
+Sample output (Stories-110M, temp=0.5):
+> *"He loved to play with his toys and his friends. One day, Max saw a big, red ball on the ground. He was so happy and said, 'Hi, I'm Max. I'm playing with my ball!'"*
 
 **Throughput** (Tiny-ANE 13M, M3 Pro): `12.6 steps/sec` · `11.5M tokens/hour` · `92M tokens overnight (8h)`
+
+> [!TIP]
+> Full experiment details, loss curves, and hardware measurements: **[docs/EXPERIMENT_LOG.md](docs/EXPERIMENT_LOG.md)**
 
 <details>
 <summary><b>What this is NOT for</b></summary>
