@@ -24,6 +24,7 @@ unlimited steps across any number of layers.
 | `mil_dynamic.h` | MIL program generators for all 10 ANE kernels (RoPE, SDPA, matmuls) |
 | `cpu_ops.h` | CPU operations: RMSNorm fwd/bwd, cross-entropy, Adam, embedding, RoPE backward, vocab compaction |
 | `generate.m` | Autoregressive text generation from a trained checkpoint |
+| `ane_train.h` | High-level C API: 18 functions for training, generation, monitoring |
 | `hw_monitor.h` | Background hardware monitor (CPU, GPU, memory, thermal) writing CSV logs |
 | `Makefile` | Build system with model selection via `MODEL=` |
 | `models/*.h` | Per-model dimension configs (see below) |
@@ -162,6 +163,105 @@ ANE utilization is not available on consumer macOS (always -1).
 ## Training Results
 
 See `docs/EXPERIMENT_LOG.md` for detailed experiment results and loss curves.
+
+## High-Level API — `ane_train.h`
+
+`training_dynamic/ane_train.h` provides 18 public functions wrapping the entire training pipeline
+into a session-based C API. No need to manage MIL programs, IOSurfaces, or kernels directly.
+
+### API Surface
+
+**Training:**
+| Function | Description |
+|----------|-------------|
+| `ane_train_create(model, data_path)` | Create training session for a model |
+| `ane_train_step(session)` | Run one training step (forward + backward + Adam) |
+| `ane_train_run(session, steps)` | Run N training steps |
+| `ane_train_save(session, path)` | Save checkpoint |
+| `ane_train_destroy(session)` | Free all resources |
+
+**Generation:**
+| Function | Description |
+|----------|-------------|
+| `ane_gen_create(checkpoint)` | Load checkpoint for generation |
+| `ane_gen_run(session, prompt, callback)` | Generate with streaming token callback |
+| `ane_gen_destroy(session)` | Free generation session |
+
+**Hardware Monitoring:**
+| Function | Description |
+|----------|-------------|
+| `ane_hw_snapshot()` | Get current CPU, GPU, memory, thermal state |
+
+### Build as Static Library
+
+```bash
+cd training/training_dynamic
+make libane_train MODEL=stories110m   # → libane_train_stories110m.a
+make libane_train MODEL=tiny_ane      # → libane_train_tiny_ane.a
+```
+
+The library is compiled per model because model dimensions are compile-time constants.
+Link against the `.a` file from any C, Objective-C, or Swift project.
+
+## Native macOS App
+
+`app/ANETraining.swift` is a SwiftUI menu bar app built on top of `libane_train`.
+
+- **MenuBarExtra** with brain icon — lives in the menu bar, not the dock
+- **3 tabs:** Training (start/stop/resume), Generation (prompt + stream), Hardware Monitor
+- **614 KB** binary, no Xcode project needed
+
+### Build & Install
+
+```bash
+cd app && bash build.sh       # Compiles Swift + links libane_train
+# Output: "ANE Training.app"
+# Drag to /Applications to install
+```
+
+## Integration Guide — Using libane_train from Swift
+
+To use the API from your own Swift app:
+
+1. **Build the static library** for your target model:
+   ```bash
+   make libane_train MODEL=stories110m
+   ```
+
+2. **Add to your Swift project:**
+   - Link `libane_train_stories110m.a`
+   - Add a bridging header importing `ane_train.h`
+   - Link frameworks: `Foundation`, `IOSurface`, `Accelerate`
+
+3. **Call from Swift:**
+   ```swift
+   // Bridging header:
+   // #include "ane_train.h"
+
+   let session = ane_train_create("stories110m", "data.bin")
+   defer { ane_train_destroy(session) }
+
+   for _ in 0..<1000 {
+       ane_train_step(session)
+   }
+   ane_train_save(session, "checkpoint.bin")
+
+   // Hardware monitoring
+   let hw = ane_hw_snapshot()
+   print("CPU: \(hw.cpu_percent)%, Thermal: \(hw.thermal)")
+   ```
+
+4. **Generation with streaming:**
+   ```swift
+   let gen = ane_gen_create("checkpoint.bin")
+   defer { ane_gen_destroy(gen) }
+
+   ane_gen_run(gen, "Once upon a time") { token in
+       print(String(cString: token), terminator: "")
+   }
+   ```
+
+See `app/ANETraining.swift` for a complete working example.
 
 ## Key Constraints
 

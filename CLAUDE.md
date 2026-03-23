@@ -10,9 +10,11 @@ evaluating models directly on the ANE. Apple officially only allows inference vi
 
 ```
 ./ane                    CLI entry point (bash)
+app/                     Native macOS menu bar app (SwiftUI, 614 KB)
 examples/                Runnable demos (bench.c, demo_train.c, generate.c, explore.m)
 libane/                  Core C API (ane.h, ane.m)
 training/                Training pipeline (train_pipeline.m, train_large_ane.m, headers)
+  training_dynamic/      Dynamic training with high-level API (ane_train.h, hw_monitor.h)
 docs/                    Research findings (ANE_MONITORING, CHAINING, COMPILER_OPTIONS, etc.)
 assets/                  Model assets (tokenizer.bin)
 ```

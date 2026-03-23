@@ -225,6 +225,56 @@ Interactive menu — builds everything automatically.
 ./ane monitor        # Deep ANE probe (thermal, device info, sustained)
 ```
 
+---
+
+## Native macOS App
+
+A lightweight menu bar app for training, generation, and hardware monitoring — no terminal needed.
+
+| | |
+|:--|:--|
+| **Build** | `cd app && bash build.sh` |
+| **Install** | Drag `ANE Training.app` to `/Applications` |
+| **Size** | 614 KB binary, no Xcode project needed |
+| **Tabs** | Training, Generation, Hardware Monitor |
+
+The app is a SwiftUI `MenuBarExtra` with a brain icon. It links against `libane_train`, the high-level C API (see below).
+
+---
+
+## High-Level API — `ane_train.h`
+
+For integrating ANE training into your own app. 18 public functions covering training, generation, and monitoring.
+
+```c
+#include "ane_train.h"
+
+// Training
+AneTrainSession *s = ane_train_create("stories110m", "data.bin");
+for (int i = 0; i < 5000; i++) ane_train_step(s);
+ane_train_save(s, "checkpoint.bin");
+ane_train_destroy(s);
+
+// Generation (with streaming callback)
+AneGenSession *g = ane_gen_create("checkpoint.bin");
+ane_gen_run(g, "Once upon a time", my_token_callback);
+ane_gen_destroy(g);
+
+// Hardware snapshot
+AneHWSnapshot hw = ane_hw_snapshot();
+printf("CPU: %.1f%%, Thermal: %d\n", hw.cpu_percent, hw.thermal);
+```
+
+**Build as static library** (per model):
+```bash
+cd training/training_dynamic
+make libane_train MODEL=stories110m   # → libane_train_stories110m.a
+```
+
+Usable from C, Objective-C, and Swift. Full API reference and Swift integration guide: **[docs/ANE_DYNAMIC_TRAINING.md](docs/ANE_DYNAMIC_TRAINING.md)**
+
+---
+
 <details open>
 <summary><b>Training Demo</b> — <code>make demo</code></summary>
 
@@ -759,6 +809,10 @@ The benchmark and `./ane monitor` track what Apple exposes — and document what
 ANE-Training/
 │
 ├── ane ······························· CLI Entry Point (./ane)
+├── app/ ······························ Native macOS Menu Bar App
+│   ├── ANETraining.swift               SwiftUI app (Training, Generation, Monitor)
+│   ├── build.sh                        Build script (no Xcode needed)
+│   └── ANE Training.app                Built app (614 KB)
 ├── README.md ·························· This document
 ├── ARCHITECTURE.md ···················· 4-Layer Platform Architecture
 ├── ROADMAP.md ························· Optimization Plan (P0 completed)
@@ -778,7 +832,7 @@ ANE-Training/
 ├── training/ ·························· Training Pipeline
 │   ├── train_pipeline.m                 Pipeline Parallel (ANE Forward ‖ CPU Backward)
 │   ├── train_large_ane.m                ANE Training (sequential baseline)
-│   ├── training_dynamic/               Dynamic weight training (compile once, train unlimited)
+│   ├── training_dynamic/               Dynamic training + high-level API (ane_train.h, hw_monitor.h)
 │   ├── dashboard.py                     TUI Dashboard (blessed + powermetrics)
 │   ├── stories_config.h                 Model config (Stories110M / Qwen3-0.6B)
 │   ├── forward.h / backward.h          Forward/backward pass implementations
