@@ -2,7 +2,7 @@
 **Date:** 2026-03-20
 **Branch:** experiment/3h-optimize-session
 **Baseline:** 77 ms/step, 2.26 TFLOPS, 0% overlap, loss flat at ~10.43
-**Status:** 12 rounds + convergence achieved. Two bugs found: FP16 underflow (Round 10) and rmsnorm_bwd w[i] placement (Round 12). Full 1B-token training converges (Round 12c).
+**Status:** 12 rounds + convergence achieved. Stories-110M generates coherent text (loss 1.86, 41 tok/s). GPU verified not used (0%). Hardware monitor built.
 **NOTE:** ANE compile budget exhausted during experiments — **reboot required** to recover.
 
 ## What Works
@@ -480,3 +480,53 @@ Step     Loss     Notes
 
 **Files created:**
 - `training/training_dynamic/generate.m` — text generation with ANE inference
+
+### Round 12e — Overnight 100K Training + Hardware Monitor (2026-03-22/23)
+
+**Hardware monitor built (`hw_monitor.h`):**
+Samples CPU, GPU, memory, thermal every second during training. Writes `hw_log.csv`.
+
+**Definitive hardware measurements (Stories-110M, M3 Pro):**
+| Metric | Value |
+|--------|-------|
+| GPU utilization | **0%** — GPU is NOT used |
+| GPU memory | 0.1 MB — no Metal shaders |
+| BLAS throughput | 988-1547 GFLOPS — AMX coprocessor, not GPU |
+| ANE utilization | Not measurable (Apple locks on consumer macOS) |
+| Thermal | Always Nominal |
+| RAM | 2923 MB |
+
+**Overnight training results (100K steps Stories-110M + 10K steps Qwen3):**
+
+Stories-110M (100K steps, lr=1e-4, accum=10, maxact=100, ~4.4h):
+```
+Step     Loss
+0        9.72
+20K      2.61
+40K      2.23
+60K      2.11
+80K      1.86  ← best
+100K     2.13
+```
+- No NaN, activations stable, 121.5 ms/step
+- Best checkpoint at loss 1.86: generates coherent children's stories at 41 tok/s
+- Sample: "He loved to play with his toys and his friends. One day, Max saw a big,
+  red ball on the ground. He was so happy..."
+
+Qwen3-0.6B SEQ=128 (10K steps, lr=1e-4, accum=10, ~2.5h):
+```
+Step     Loss
+0        9.66
+1K       5.53
+5K       5.75
+9K       4.77
+```
+- Survives on 18GB Mac with SEQ=128, 334 ms/step
+- Learning but slow — needs more steps or higher LR
+
+**Activation clamping results:**
+- `--maxact 50` + lr=3e-4: saturates, kills gradients → NaN at step 15K
+- `--maxact 100` + lr=1e-4: **perfect** — clamp never triggers, acts as safety net
+- Weight norm clamping (`--wnorm`) alone insufficient — other weights also grow
+
+**Key insight:** lr=1e-4 is the primary stabilizer. maxact=100 is insurance for very long runs.
