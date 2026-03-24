@@ -51,6 +51,12 @@ training/test_weight_reload
 training/test_perf_stats
 training/test_qos_sweep
 training/test_ane_advanced
+training/test_ffn_bwd_debug
+training/test_ffn_bwd_mini
+training/test_fused_bwd
+training/sweep_single
+training/sweep_stacked
+training/sweep_training
 
 # Temp
 /tmp/
@@ -64,5 +70,20 @@ libane/bench_gpu
 training/bench_model_sizes
 training/test_dw_ane
 libane/test_gpu
+training/training_dynamic/train
 training/training_dynamic/train_*_ane
+training/training_dynamic/train_stories110m
+training/training_dynamic/train_qwen3_06b
+training/training_dynamic/train_qwen3_06b_s128
+training/training_dynamic/generate_stories110m
+training/training_dynamic/generate_tiny_ane
+training/training_dynamic/libane_train_stories110m.a
+training/training_dynamic/hw_log.csv
 training/training_dynamic/sweep_results.txt
+
+# App build artifacts
+app/ANETraining
+app/ANE Training.app/
+
+# Benchmark build artifacts
+benchmark/
