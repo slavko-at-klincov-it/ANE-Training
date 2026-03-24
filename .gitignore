@@ -85,5 +85,4 @@ training/training_dynamic/sweep_results.txt
 app/ANETraining
 app/ANE Training.app/
 
-# Benchmark build artifacts (keep source: .py, .sh)
-benchmark/results/
+# Benchmark (keep source + results, only ignore nothing)

@@ -1,0 +1,20 @@
+Model: Stories-110M on GPU (MPS)
+Params: 85.0M unique (109.5M total with tied)
+Config: dim=768 hidden=2048 heads=12 layers=12 seq=256 vocab=32000
+Data: 500000 tokens from /Users/slavkoklincov/Code/ANE-Training/benchmark/../training/tinystories_data00.bin
+
+Training: 20 steps, accum=10, lr=0.0003, warmup=10
+======================================================================
+step    0  loss=10.4225  lr=3.00e-05  1025.3ms/step  1.27 TFLOPS
+step    5  loss=10.4206  lr=1.80e-04  843.1ms/step  1.55 TFLOPS
+step   10  loss=10.4218  lr=3.00e-04  842.0ms/step  1.55 TFLOPS
+step   15  loss=10.4094  lr=1.65e-04  835.1ms/step  1.56 TFLOPS
+
+======================================================================
+GPU (MPS) Training Complete
+  Steps: 20, Accum: 10
+  Avg step: 850.2 ms
+  Avg TFLOPS: 1.54
+  Final loss: 10.4120
+  Total time: 17.0s
+  Results saved to /Users/slavkoklincov/Code/ANE-Training/benchmark/results/power_gpu_training.json
