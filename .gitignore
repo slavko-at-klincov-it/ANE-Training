@@ -81,9 +81,9 @@ training/training_dynamic/libane_train_stories110m.a
 training/training_dynamic/hw_log.csv
 training/training_dynamic/sweep_results.txt
 
-# App build artifacts
+# App build artifacts (keep source: .swift, .h, .sh, .plist)
 app/ANETraining
 app/ANE Training.app/
 
-# Benchmark build artifacts
-benchmark/
+# Benchmark build artifacts (keep source: .py, .sh)
+benchmark/results/
