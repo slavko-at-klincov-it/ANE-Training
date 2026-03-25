@@ -86,6 +86,8 @@
 > | `MLCSGDOptimizer` / `MLCAdamOptimizer` | Built-in optimizers | [Link](https://developer.apple.com/documentation/mlcompute/mlcsgdoptimizer) |
 >
 > All deprecated. No replacement. CoreML's [`MLUpdateTask`](https://developer.apple.com/documentation/coreml/personalizing-a-model-with-on-device-updates) only supports last FC/Conv layers — not full transformer training.
+>
+> **The current situation: every door is closed.** MLCompute (ANE training) — deprecated. CoreML training — last layers only. MLX — Apple says ["intended for research, not production deployment"](https://www.swift.org/blog/mlx-swift/). MPSGraph — GPU only, no ANE. Private APIs — App Store rejected. Every sanctioned path for full on-device model training is either deprecated, limited, or explicitly not for production. **The last hope: [WWDC 2026 (June)](https://developer.apple.com/wwdc/)** — Apple's new Core AI framework for iOS 27 may finally restore ANE training access. Until then, this project remains the only way.
 
 > [!NOTE]
 > **Correction (March 2026):** Earlier versions of this README described the ANE APIs as "undocumented" and claimed Apple "never gave developers tools to train models" on the ANE. This was wrong. Apple's [MLCompute framework](https://developer.apple.com/documentation/mlcompute) (2020) included public, documented ANE training support — a simple search for "ANE Apple" on developer.apple.com shows this as the first result. We initially missed this and have corrected all documentation. We apologize for the inaccuracy.
