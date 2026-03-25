@@ -25,7 +25,7 @@
 
 > **ANE-accelerated training** — the Neural Engine handles the heavy matrix multiplications, CPU does the rest. GPU stays free.
 >
-> The first standalone C API (`libane`) for Apple's private Neural Engine. Apple restricts the ANE to inference via CoreML. This project unlocks **training** — the expensive weight operations run on the ANE, everything else on CPU.
+> The first standalone C API (`libane`) for Apple's Neural Engine. Apple once offered public ANE training APIs (MLCompute, 2020) but deprecated them without replacement. CoreML only supports inference and last-layer fine-tuning. This project restores full ANE training via low-level private APIs — the expensive weight operations run on the ANE, everything else on CPU.
 
 > [!IMPORTANT]
 > **How does the training actually work?**
@@ -969,7 +969,7 @@ sysctl sysctl.proc_translated 2>/dev/null
 ---
 
 > [!CAUTION]
-> This project uses Apple's **private, undocumented APIs**. These can change with any macOS update. `libane` has version detection as protection — if Apple renames classes, only `ane.m` needs to be updated. Your code against `ane.h` remains unchanged.
+> This project uses Apple's **private low-level APIs** (the high-level ANE training API, MLCompute, was deprecated by Apple in 2022). These private APIs can change with any macOS update. `libane` has version detection as protection — if Apple renames classes, only `ane.m` needs to be updated. Your code against `ane.h` remains unchanged.
 
 <div align="center">
 

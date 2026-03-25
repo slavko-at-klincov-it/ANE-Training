@@ -2,7 +2,7 @@
 
 ## The One-Sentence Version
 
-Someone figured out how to **teach AI models new things** using a hidden chip inside every Mac (the Neural Engine) that Apple only officially allows for *running* AI, not *training* it.
+Someone figured out how to **teach AI models new things** using the Neural Engine chip inside every Mac — after Apple deprecated their own public training API (MLCompute) and left no replacement.
 
 ---
 
@@ -10,9 +10,9 @@ Someone figured out how to **teach AI models new things** using a hidden chip in
 
 Every modern Mac and iPhone has a special chip called the **Apple Neural Engine (ANE)**. Think of it like a dedicated brain for AI tasks — it's incredibly fast and power-efficient at running neural networks.
 
-Apple designed this chip for **inference** — meaning it can *use* a trained AI model (like recognizing your face in photos), but Apple never gave developers tools to *train* models on it (teach the model new things).
+Apple designed this chip primarily for **inference** — meaning it can *use* a trained AI model (like recognizing your face in photos). Apple briefly offered a public training API (MLCompute, 2020-2022) that included ANE support, but deprecated it without providing a replacement. CoreML's on-device training only supports fine-tuning the last layers of a model.
 
-This project **cracks that restriction open**.
+This project **restores full ANE training** via low-level private APIs.
 
 ## How Does It Work? (Simple Version)
 
@@ -23,7 +23,7 @@ This project:
 2. **Sneaks recipes in** — feeds the ANE specially formatted instructions (called MIL programs) that look like normal inference work but actually perform training calculations
 3. **Passes ingredients through the window** — uses a clever trick where training data (weights) are packed alongside normal input data, so the ANE processes both without knowing the difference
 
-The result: an AI model that **learns** directly on the Neural Engine, something Apple never intended to be possible.
+The result: an AI model that **learns** directly on the Neural Engine — a capability Apple once offered publicly but then took away.
 
 ## What Can It Actually Train?
 
@@ -82,14 +82,14 @@ For context, ChatGPT has hundreds of billions of parameters — these are much s
 
 - **Not a product** — it's research code, a proof of concept
 - **Not a replacement for PyTorch/TensorFlow** — those are complete ecosystems; this is a focused experiment
-- **Not stable** — it uses Apple's private, undocumented APIs that could break with any macOS update
+- **Not stable** — it uses Apple's private low-level APIs (the public high-level API, MLCompute, was deprecated) that could break with any macOS update
 - **Not for large models** — you won't train GPT-4 on your MacBook; this works for small-to-medium models
 
 ## Why It Matters
 
 This project demonstrates that **consumer hardware has untapped potential**. The Neural Engine in your Mac is a powerful AI accelerator that sits mostly idle. By showing that training is possible — not just inference — it opens a conversation about what Apple could officially enable if they chose to.
 
-It's also a remarkable piece of reverse engineering: discovering undocumented APIs, understanding binary weight formats, working around hardware limitations (like the 119-compilation limit), and building a complete training pipeline from scratch — all without any documentation from Apple.
+It's also a significant piece of engineering: working with Apple's private low-level APIs (after the public high-level training API was deprecated), understanding binary weight formats, working around hardware limitations (like the 119-compilation limit), and building a complete training pipeline from scratch.
 
 ## Key Numbers
 

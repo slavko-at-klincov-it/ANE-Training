@@ -30,7 +30,7 @@ This project **reverse-engineers Apple's private Neural Engine (ANE) APIs** to e
 
 ## Private API Surface
 
-Four undocumented classes resolved at runtime via `NSClassFromString()`:
+Four private low-level classes resolved at runtime via `NSClassFromString()` (the public high-level training API, MLCompute with `MLCDevice.ane()`, was deprecated by Apple without replacement):
 
 | Class | Purpose |
 |-------|---------|
