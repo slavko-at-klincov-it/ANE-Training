@@ -71,6 +71,8 @@
 > - A GPU competitor — MLX is faster for throughput, we're faster at staying out of the way
 > - CoreML / Metal / MLX — we bypass Apple's public frameworks entirely
 > - Pure ANE training — each step is a collaboration between ANE (matmuls) and CPU (everything else)
+>
+> **Why private APIs?** Apple once had a public ANE training API — [`MLCDevice.ane()`](https://developer.apple.com/documentation/mlcompute/mlcdevice/ane()) in the MLCompute framework with [`MLCTrainingGraph`](https://developer.apple.com/documentation/mlcompute/mlctraininggraph/). Apple deprecated the entire framework without providing a replacement. CoreML's [`MLUpdateTask`](https://developer.apple.com/documentation/coreml/personalizing-a-model-with-on-device-updates) only supports fine-tuning the last FC/Conv layers — not full transformer training. This project fills the gap. See [LEGAL.md](LEGAL.md) for the legal basis (DMCA §1201(f), Sega v. Accolade).
 
 ---
 
@@ -630,6 +632,30 @@ Full API documentation: **[libane/README.md](libane/README.md)**
 That's why TOPS can be higher than TFLOPS on the same hardware. Apple publishes TOPS (INT8), we measure TFLOPS (FP16).
 
 </details>
+
+---
+
+## iPhone ANE Training Results
+
+Benchmarked on iPhone 15 Pro (A17 Pro, h16 architecture, 35 TOPS, 8 GB RAM). Full results: [ANE-Training-iPhone](https://github.com/slavko-at-klincov-it/ANE-Training-iPhone/blob/main/BENCHMARK_RESULTS.md)
+
+| Metric | Mac (M3 Pro) | iPhone (A17 Pro) |
+|:---|---:|---:|
+| **Training steps/s** | 11.0 (pipeline) | 3.25 (optimized) |
+| **Training TFLOPS** | 2.15 | ~0.7 |
+| **Inference tok/s** | — | 2,480 (ANE) / 3,215 (CPU) |
+| **ANE Power (inference)** | — | 2.51 W |
+| **CPU Power (inference)** | — | 8.65 W |
+| **ANE Tokens/Joule** | — | 990 (2.7x more efficient than CPU) |
+| **Compile overhead** | 0% (Dynamic Spatial Packing) | 42% (weight baking) |
+| **Peak RAM** | 2,923 MB | 2,367 MB |
+| **Thermal** | Nominal | Nominal (inference) / Serious (training) |
+
+**Key differences:**
+- Mac uses **Dynamic Spatial Packing** (compile once, train forever) — eliminates recompilation entirely
+- iPhone still uses **weight baking** (recompile every 8 steps) — 42% overhead
+- iPhone ANE inference is extremely power-efficient: **2.51W** vs CPU at 8.65W
+- CPU inference is 30% faster than ANE on iPhone (due to IOSurface transfer overhead being 51% of ANE forward pass time)
 
 ---
 

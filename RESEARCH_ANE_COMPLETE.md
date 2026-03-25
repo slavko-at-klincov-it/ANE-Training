@@ -485,6 +485,28 @@ First academic paper on ANE programming. Key discoveries:
 19. M4 Max SRAM ~32 MB (M3 Pro likely ~16 MB based on perf knee)
 20. ANE reads flat buffers as packed `[1,C,1,S]` from byte 0
 
+### Apple's Public ANE Training APIs (Deprecated)
+
+Apple once provided public APIs for ANE training — then removed them:
+
+| Framework | API | Introduced | Status |
+|-----------|-----|-----------|--------|
+| **MLCompute** | [`MLCDevice.ane()`](https://developer.apple.com/documentation/mlcompute/mlcdevice/ane()) | iOS 14 (2020) | **Deprecated** |
+| **MLCompute** | [`MLCTrainingGraph`](https://developer.apple.com/documentation/mlcompute/mlctraininggraph/) | iOS 14 (2020) | **Deprecated** |
+| **MLCompute** | [`MLCDeviceType.ane`](https://developer.apple.com/documentation/mlcompute/mlcdevicetype/ane) | iOS 14 (2020) | **Deprecated** |
+| **CoreML** | [`MLUpdateTask`](https://developer.apple.com/documentation/coreml/personalizing-a-model-with-on-device-updates) | iOS 13 (2019) | Active (last layers only) |
+| **CoreML** | [`MLNeuralEngineComputeDevice`](https://developer.apple.com/documentation/coreml/mlneuralenginecomputedevice) | iOS 17 | Active (read-only info) |
+| **CoreML** | [`com.apple.developer.coreml.neural-engine-access`](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.coreml.neural-engine-access) | iOS 17 | Active (inference entitlement) |
+
+**What this means:**
+- `MLCDevice.ane()` + `MLCTrainingGraph` = the exact functionality we reverse-engineer (ANE as training target with auto-differentiation)
+- Apple deprecated the entire MLCompute framework with no replacement for ANE training
+- CoreML's `MLUpdateTask` only supports fine-tuning last FC/Conv layers — cannot backpropagate through attention, normalization, or activation layers
+- `com.apple.developer.coreml.neural-engine-access` is an inference-only entitlement
+- `MLNeuralEngineComputeDevice` is a read-only info object (device capabilities)
+
+**Upcoming:** Apple is replacing CoreML with **Core AI** at WWDC 2026 (iOS 27). Unknown if ANE training will be re-exposed. See [9to5Mac report](https://9to5mac.com/2026/03/01/apple-replacing-core-ml-with-modernized-core-ai-framework-for-ios-27-at-wwdc/).
+
 ### ANE Hardware Architecture (from Apple Patents)
 
 **US20190340486 — Multiply-Accumulate Architecture:**

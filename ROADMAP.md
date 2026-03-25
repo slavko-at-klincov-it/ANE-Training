@@ -231,13 +231,37 @@ output = matmul(attn, V)
 
 ---
 
+## P3 — Future: Apple Core AI (iOS 27 / macOS 28)
+
+Apple is replacing CoreML with a new **Core AI** framework at WWDC 2026 (June). This could impact the project:
+
+**Possible scenarios:**
+1. **Core AI exposes ANE training** → Port libane to use public APIs, enable App Store distribution
+2. **Core AI is inference-only** → No change, private APIs remain the only option
+3. **Core AI deprecates more frameworks** → May break private API surface, require adaptation
+
+**Historical context:** Apple's MLCompute framework (iOS 14, 2020) had public ANE training APIs:
+- [`MLCDevice.ane()`](https://developer.apple.com/documentation/mlcompute/mlcdevice/ane()) — select ANE as compute target
+- [`MLCTrainingGraph`](https://developer.apple.com/documentation/mlcompute/mlctraininggraph/) — training graph with auto-differentiation
+
+Apple deprecated the entire framework without replacement. CoreML's `MLUpdateTask` only supports fine-tuning last layers (FC/Conv). This project fills that gap.
+
+**Action:** Monitor WWDC 2026 announcements. If Core AI provides ANE training, libane becomes a reference implementation. If not, this project remains the only way to train on ANE.
+
+Sources:
+- [Apple replacing Core ML with Core AI (9to5Mac)](https://9to5mac.com/2026/03/01/apple-replacing-core-ml-with-modernized-core-ai-framework-for-ios-27-at-wwdc/)
+- [MLCompute documentation (deprecated)](https://developer.apple.com/documentation/mlcompute)
+
+---
+
 ## New Projects & Sources
 
 | Project | Relevance |
 |:---|:---|
 | [Orion Paper](https://arxiv.org/abs/2603.06728) | Delta Compilation, LoRA-as-Input, 20 Constraints |
 | [NeuralForge](https://github.com/Khaeldur/NeuralForge) | Process-Restart, GGUF-Export, Gradient Accumulation |
-| [ANEMLL](https://github.com/Anemll/Anemll) | ANE ML Library |
+| [ANEMLL](https://github.com/Anemll/Anemll) | ANE inference for LLMs via CoreML (no training, public APIs, 47-62 tok/s) |
+| [ANE-Training-iPhone](https://github.com/slavko-at-klincov-it/ANE-Training-iPhone) | iPhone port of this project — 3.25 steps/s, production app, benchmarks |
 | [SqueezeBits Yetter](https://blog.squeezebits.com/disaggregated-inference-on-apple-silicon-npu-prefill-and-gpu-decode-67176) | Disaggregated Inference (ANE Prefill + GPU Decode) |
 | [Metal FlashAttention 2.0](https://engineering.drawthings.ai/) | GPU Attention |
 | [Apple MLX M5 Research](https://machinelearning.apple.com/research/exploring-llms-mlx-m5) | GPU Neural Accelerator Benchmarks |

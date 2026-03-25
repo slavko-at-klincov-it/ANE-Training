@@ -19,3 +19,15 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+Legal Notice:
+
+This project uses Apple's private AppleNeuralEngine.framework APIs discovered
+through runtime introspection. No Apple proprietary source code or binaries
+are included in this repository. This constitutes reverse engineering for
+interoperability purposes under DMCA Section 1201(f) and fair use doctrine
+(see Sega v. Accolade, 977 F.2d 1510, 9th Cir. 1992).
+
+See LEGAL.md for full details.
