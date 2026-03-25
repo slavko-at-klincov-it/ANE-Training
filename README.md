@@ -74,6 +74,9 @@
 >
 > **Why private APIs?** Apple once had a public ANE training API — [`MLCDevice.ane()`](https://developer.apple.com/documentation/mlcompute/mlcdevice/ane()) in the MLCompute framework with [`MLCTrainingGraph`](https://developer.apple.com/documentation/mlcompute/mlctraininggraph/). Apple deprecated the entire framework without providing a replacement. CoreML's [`MLUpdateTask`](https://developer.apple.com/documentation/coreml/personalizing-a-model-with-on-device-updates) only supports fine-tuning the last FC/Conv layers — not full transformer training. This project fills the gap. See [LEGAL.md](LEGAL.md) for the legal basis (DMCA §1201(f), Sega v. Accolade).
 
+> [!NOTE]
+> **Correction (March 2026):** Earlier versions of this README described the ANE APIs as "undocumented" and claimed Apple "never gave developers tools to train models" on the ANE. This was wrong. Apple's [MLCompute framework](https://developer.apple.com/documentation/mlcompute) (2020) included public, documented ANE training support — a simple search for "ANE Apple" on developer.apple.com shows this as the first result. We initially missed this and have corrected all documentation. We apologize for the inaccuracy.
+
 ---
 
 ## Use Cases
