@@ -72,7 +72,20 @@
 > - CoreML / Metal / MLX — we bypass Apple's public frameworks entirely
 > - Pure ANE training — each step is a collaboration between ANE (matmuls) and CPU (everything else)
 >
-> **Why private APIs?** Apple once had a public ANE training API — [`MLCDevice.ane()`](https://developer.apple.com/documentation/mlcompute/mlcdevice/ane()) in the MLCompute framework with [`MLCTrainingGraph`](https://developer.apple.com/documentation/mlcompute/mlctraininggraph/). Apple deprecated the entire framework without providing a replacement. CoreML's [`MLUpdateTask`](https://developer.apple.com/documentation/coreml/personalizing-a-model-with-on-device-updates) only supports fine-tuning the last FC/Conv layers — not full transformer training. This project fills the gap. See [LEGAL.md](LEGAL.md) for the legal basis (DMCA §1201(f), Sega v. Accolade).
+> **Why private APIs?** Apple had a complete, public ANE training framework — **MLCompute** (2020) — with full documentation. They deprecated it without replacement. This project restores that capability via low-level private APIs. See [LEGAL.md](LEGAL.md) for the legal basis.
+>
+> **Apple's deprecated MLCompute training API (was fully documented):**
+>
+> | API | What it did | Docs |
+> |:----|:------------|:-----|
+> | `MLCDevice.ane()` | Select ANE as compute target | [Link](https://developer.apple.com/documentation/mlcompute/mlcdevice/ane()) |
+> | `MLCTrainingGraph` | Training graph with auto-differentiation | [Link](https://developer.apple.com/documentation/mlcompute/mlctraininggraph/) |
+> | `MLCTrainingGraph.compile(options:device:)` | Compile graph for ANE/GPU/CPU | [Link](https://developer.apple.com/documentation/mlcompute/mlctraininggraph/compile(options:device:)) |
+> | `MLCTrainingGraph.optimizer` | Set optimizer (Adam, SGD) | [Link](https://developer.apple.com/documentation/mlcompute/mlctraininggraph/optimizer) |
+> | `MLCTrainingGraph.gradientData(forParameter:layer:)` | Access gradients per parameter | [Link](https://developer.apple.com/documentation/mlcompute/mlctraininggraph/gradientdata(forparameter:layer:)) |
+> | `MLCSGDOptimizer` / `MLCAdamOptimizer` | Built-in optimizers | [Link](https://developer.apple.com/documentation/mlcompute/mlcsgdoptimizer) |
+>
+> All deprecated. No replacement. CoreML's [`MLUpdateTask`](https://developer.apple.com/documentation/coreml/personalizing-a-model-with-on-device-updates) only supports last FC/Conv layers — not full transformer training.
 
 > [!NOTE]
 > **Correction (March 2026):** Earlier versions of this README described the ANE APIs as "undocumented" and claimed Apple "never gave developers tools to train models" on the ANE. This was wrong. Apple's [MLCompute framework](https://developer.apple.com/documentation/mlcompute) (2020) included public, documented ANE training support — a simple search for "ANE Apple" on developer.apple.com shows this as the first result. We initially missed this and have corrected all documentation. We apologize for the inaccuracy.
