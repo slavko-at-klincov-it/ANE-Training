@@ -29,6 +29,7 @@ swiftc -O \
   -framework IOKit \
   -framework SwiftUI \
   -framework AppKit \
+  -framework ServiceManagement \
   -o ANETraining \
   ANETraining.swift
 

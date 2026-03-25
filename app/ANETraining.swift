@@ -4,6 +4,7 @@
 
 import SwiftUI
 import Combine
+import ServiceManagement
 
 // MARK: - App Entry Point
 
@@ -28,6 +29,7 @@ struct ANETrainingApp: App {
 
 struct ContentView: View {
     @State private var selectedTab = 0
+    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
         VStack(spacing: 0) {
@@ -51,7 +53,41 @@ struct ContentView: View {
                 default: TrainingView()
                 }
             }
-            .frame(width: 384, height: 440)
+            .frame(width: 384, height: 410)
+
+            Divider()
+
+            // Footer: Launch at Login + Quit
+            HStack {
+                Toggle("Bei Anmeldung starten", isOn: $launchAtLogin)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 11))
+                    .onChange(of: launchAtLogin) {
+                        do {
+                            if launchAtLogin {
+                                try SMAppService.mainApp.register()
+                            } else {
+                                try SMAppService.mainApp.unregister()
+                            }
+                        } catch {
+                            launchAtLogin = SMAppService.mainApp.status == .enabled
+                        }
+                    }
+
+                Spacer()
+
+                Button(action: { NSApp.terminate(nil) }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "power")
+                        Text("Beenden")
+                    }
+                    .font(.system(size: 11))
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
         .frame(width: 400, height: 500)
     }
@@ -801,20 +837,6 @@ struct MonitorView: View {
             }
 
             Spacer()
-
-            // Quit button
-            HStack {
-                Spacer()
-                Button(action: { NSApp.terminate(nil) }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "power")
-                        Text("Quit")
-                    }
-                    .font(.system(size: 11))
-                }
-                .buttonStyle(.plain)
-                .foregroundColor(.secondary)
-            }
         }
         .padding(12)
     }
