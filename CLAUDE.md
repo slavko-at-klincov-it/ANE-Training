@@ -40,6 +40,9 @@ cd training && make <target>          # Build specific training target
 - **Sustained Single-Kernel: 5.01 TFLOPS** (continuous eval, one kernel shape).
 - **Real Training (Stories-110M): 2.15 TFLOPS** (80.9 ms/step, pipeline parallel).
 - **Sequential Training: 1.87 TFLOPS** (93 ms/step, without pipeline).
+- **Inference: CPU beats ANE at all shapes up to 1024x1024** — ANE avg 722 GFLOPS vs CPU 1449 GFLOPS (M3 Pro).
+- **ANE inference power: ~200-400 mW** — 5-20x more power-efficient than CPU/GPU (~2400 GFLOPS/Watt vs ~290).
+- **ANE value proposition is power efficiency, not speed.**
 - **Training converges**: Stories-110M loss 9.72→3.00 best (50K steps, 1B tokens, diverges to NaN at 45K). Tiny-ANE-15M loss 9.66→2.54 (20K steps).
 - Peak numbers are benchmark-only — real training is ~6x lower due to per-layer dispatch, IOSurface I/O, and CPU gradients.
 - **Thermal: always Nominal** — ANE never throttles under sustained compute load.

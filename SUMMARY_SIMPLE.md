@@ -94,6 +94,7 @@ It's also a significant piece of engineering: working with Apple's private low-l
 ## Key Numbers
 
 - **35.1 TOPS** peak throughput (INT8 quantized) — that's 35 trillion operations per second
-- **1.88×** speedup with INT8 quantization vs FP16
+- **1.88x** speedup with INT8 quantization vs FP16
+- **722 GFLOPS** average inference throughput — slower than CPU (1449) and GPU (1828), but uses 5-20x less power
 - **Zero external dependencies** — just macOS system frameworks
 - **MIT licensed** — anyone can fork, study, and build on it

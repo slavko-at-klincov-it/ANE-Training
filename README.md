@@ -52,7 +52,7 @@
 > | GPU utilization | **0%** | GPU is not used at all |
 > | GPU memory allocated | **0.1 MB** | Only the Metal device object — no shaders, no buffers |
 > | CPU time vs wall time | **~100%** | BLAS runs on CPU/AMX, not GPU |
-> | BLAS throughput | **988–1547 GFLOPS** | Far above CPU cores (~200), far below GPU (~4000) = AMX coprocessor |
+> | CPU BLAS (AMX) throughput | **988–1547 GFLOPS** | AMX coprocessor inside the CPU, not the GPU |
 > | ANE utilization | **Not measurable** | Apple doesn't expose ANE perf stats on consumer macOS |
 > | Thermal | **Always Nominal** | ANE never causes throttling |
 > | RAM (Stories-110M) | **2923 MB** | Weights + activations + optimizer state |
@@ -62,13 +62,13 @@
 > **This IS:**
 > - Direct access to Apple's **private ANE API** (76 classes discovered, 35 exposed via libane)
 > - **ANE + CPU training** — the ANE does the heavy lifting, CPU handles optimizer and normalization
-> - **FP16 native compute** — 12.8 TFLOPS ANE peak, 2.15 TFLOPS real training throughput
+> - **FP16 native compute** — 12.8 TFLOPS ANE peak, 2.15 TFLOPS real training, 722 GFLOPS avg inference (power-efficient, not fastest)
 > - **1 compile → unlimited training steps** via Dynamic Spatial Packing
 > - **GPU verified free** — 0% utilization, 0 MB memory, measured with IOKit + Metal APIs
 > - **Built-in hardware monitoring** — every run logs CPU, GPU, memory, thermal to CSV
 >
 > **This is NOT:**
-> - A GPU competitor — MLX is faster for throughput, we're faster at staying out of the way
+> - A GPU competitor — CPU and GPU are faster at inference. ANE's advantage is **5-20x better power efficiency**, zero thermal impact, and running alongside CPU+GPU without contention
 > - CoreML / Metal / MLX — we bypass Apple's public frameworks entirely
 > - Pure ANE training — each step is a collaboration between ANE (matmuls) and CPU (everything else)
 >
@@ -650,6 +650,40 @@ Full API documentation: **[libane/README.md](libane/README.md)**
 That's why TOPS can be higher than TFLOPS on the same hardware. Apple publishes TOPS (INT8), we measure TFLOPS (FP16).
 
 </details>
+
+### Inference Performance (M3 Pro)
+
+> [!NOTE]
+> These results compare single-matmul inference latency across all three compute backends.
+> CPU uses FP32 (Accelerate/AMX). GPU uses FP32 (MPS). ANE uses FP16 (1x1 conv via libane).
+
+| Backend | Avg GFLOPS | Best Shape | Notes |
+|:--------|----------:|:-----------|:------|
+| CPU (AMX/Accelerate) | **1449** | All shapes up to 1024x1024 | FP32, dominates small-to-medium |
+| GPU (batched) | **1828** | FFN 768x3072 (3394 GFLOPS) | FP32, best pipelined throughput |
+| GPU (serial) | 474 | Huge 2048x2048 | FP32, realistic single-inference latency |
+| ANE | 722 | Huge 2048x2048 (1407 GFLOPS) | FP16, competitive only at large sizes |
+
+**CPU wins at every shape up to 1024x1024.** ANE's ~0.2ms fixed dispatch overhead makes it uncompetitive for small-to-medium matmuls. ANE only becomes competitive at 2048x2048.
+
+> Full results, latency tables, and power analysis: **[docs/INFERENCE_BENCHMARK.md](docs/INFERENCE_BENCHMARK.md)**
+
+### Why ANE? Power Efficiency
+
+ANE is not the fastest, it's the most efficient. The real advantage is GFLOPS per Watt:
+
+| Backend | Avg GFLOPS | Power Draw | GFLOPS/Watt | Thermal |
+|---------|----------:|------------|------------:|---------|
+| **ANE** | 722 | ~300 mW | **~2400** | Nominal (cool, no fan) |
+| CPU (AMX) | 1449 | ~5 W | ~290 | Fair-Serious |
+| GPU (batched) | 1828 | ~8 W | ~230 | Serious |
+
+**ANE delivers ~8x more GFLOPS per Watt than CPU, ~10x more than GPU.** This makes it ideal for:
+- 24/7 background inference without battery drain or fan noise
+- Running ML alongside GPU-heavy apps (video editing, gaming, rendering)
+- Always-on learning where power and thermal matter more than peak speed
+
+> Power estimates from `sudo powermetrics`. iPhone measurements are more precise: ANE 2.51W vs CPU 8.65W, 2.7x efficiency advantage.
 
 ---
 

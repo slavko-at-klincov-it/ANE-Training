@@ -279,7 +279,10 @@ Small model + your data > large model + generic data (for your specific tasks).
 
 | | ANE Training | MLX/Metal (GPU) | Cloud (A100/H100) |
 |:---|:---|:---|:---|
-| **Throughput** | ~2 TFLOPS | ~15 TFLOPS (M3 Pro) | 300+ TFLOPS |
+| **Training throughput** | ~2 TFLOPS | ~15 TFLOPS (M3 Pro) | 300+ TFLOPS |
+| **Inference throughput** | 722 GFLOPS (FP16) | 1449 CPU / 1828 GPU (FP32) | N/A |
+| **Inference power** | ~300 mW | ~5W (CPU) / ~8W (GPU) | N/A |
+| **GFLOPS/Watt** | **~2400** | ~290 (CPU) / ~230 (GPU) | N/A |
 | **Cost** | $0 | $0 (but blocks GPU) | $2-8/hour |
 | **Privacy** | 100% on-device | 100% on-device | Data leaves device |
 | **GPU impact** | None | 100% GPU busy | N/A |

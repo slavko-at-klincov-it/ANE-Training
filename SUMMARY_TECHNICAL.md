@@ -188,7 +188,9 @@ INT8 (quantized):
 | Stories110M | 109M | 91ms | 6 (MHA) | Llama2-style |
 | Qwen3-0.6B | 596M | 412ms | 10 (GQA) | Grouped-Query Attention |
 
-INT8 quantization: **1.88× throughput**, peak **35.1 TOPS** (vs ~19 TOPS FP16).
+INT8 quantization: **1.88x throughput**, peak **35.1 TOPS** (vs ~19 TOPS FP16).
+
+Inference vs CPU: ANE averages **722 GFLOPS** (FP16) vs CPU **1449 GFLOPS** (FP32/AMX). CPU wins at all shapes up to 1024x1024. ANE's advantage is power efficiency (~300 mW vs ~5W), not raw speed. See [docs/INFERENCE_BENCHMARK.md](docs/INFERENCE_BENCHMARK.md).
 
 ## File Map
 
