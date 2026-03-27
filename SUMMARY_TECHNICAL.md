@@ -181,14 +181,14 @@ INT8 (quantized):
 | Multi-input ANE requests fail | Pack all inputs into single spatial tensor |
 | ANE SRAM ~32MB | Performance cliff when exceeded; spatial packing helps locality |
 
-## Performance (M4)
+## Performance (M3 Pro)
 
 | Model | Params | ms/step | Kernels/layer | Architecture |
 |-------|--------|---------|---------------|-------------|
-| Stories110M | 109M | 91ms | 6 (MHA) | Llama2-style |
+| Stories110M | 109M | 80.9ms (pipeline) / 93ms (sequential) | 6 (MHA) | Llama2-style |
 | Qwen3-0.6B | 596M | 412ms | 10 (GQA) | Grouped-Query Attention |
 
-INT8 quantization: **1.88x throughput**, peak **35.1 TOPS** (vs ~19 TOPS FP16).
+INT8 quantization (M4): **1.88x throughput**, peak **35.1 TOPS** (vs ~19 TOPS FP16). M3 Pro INT8 shows only ~1.0-1.14x improvement.
 
 Inference vs CPU: ANE averages **722 GFLOPS** (FP16) vs CPU **1449 GFLOPS** (FP32/AMX). CPU wins at all shapes up to 1024x1024. ANE's advantage is power efficiency (~300 mW vs ~5W), not raw speed. See [docs/INFERENCE_BENCHMARK.md](docs/INFERENCE_BENCHMARK.md).
 

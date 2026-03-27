@@ -9,14 +9,14 @@
 
 ### Reverse-Engineering Apples Neural Engine
 
-**1 Compile · Auto Peak Detection · 35 Private Klassen · Zero Recompilation**
+**1 Compile · Auto Peak Detection · 76 Private Klassen · Zero Recompilation**
 
 [![License: MIT](https://img.shields.io/badge/Lizenz-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/macOS_15+-111111.svg?logo=apple&logoColor=white)](https://www.apple.com/macos/)
 [![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1--M5-FF3B30.svg)](https://support.apple.com/en-us/116943)
 [![Compile](https://img.shields.io/badge/Compile-1x_for_∞_Steps-34C759.svg)](#dynamic-spatial-packing--der-durchbruch)
 [![TFLOPS](https://img.shields.io/badge/Peak-Auto_Detect-007AFF.svg)](#benchmark-ergebnisse-m3-pro)
-[![Classes](https://img.shields.io/badge/ANE_Klassen-35-FF9500.svg)](RESEARCH_ANE_COMPLETE.md)
+[![Classes](https://img.shields.io/badge/ANE_Klassen-76-FF9500.svg)](RESEARCH_ANE_COMPLETE.md)
 
 </div>
 
@@ -82,7 +82,7 @@ Für den richtigen Workload (kleine Modelle, kontinuierliches Lernen, Background
 
 | | |
 |:--|:--|
-| `35` | Private API-Klassen entdeckt (bekannt: nur 4) |
+| `76` | Private API-Klassen entdeckt (bekannt: nur 4) |
 | `42%` | Schneller mit QoS Background statt Default |
 | `auto` | Peak TFLOPS automatisch erkannt beim Start (~1s) |
 | `1` | Compile reicht — unbegrenzt viele Training-Steps |

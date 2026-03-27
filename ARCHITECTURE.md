@@ -21,7 +21,7 @@ Reverse engineering of Apple's private Neural Engine framework through:
 
 ### What we discovered
 
-**35 private classes** discovered (the original repo uses only 4):
+**76 private classes** discovered (the original repo uses only 4):
 
 | Class | What it does | Used? |
 |-------|-------------|-------|
