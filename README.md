@@ -23,9 +23,9 @@
 
 <br>
 
-> **ANE-accelerated training** — the Neural Engine handles the heavy matrix multiplications, CPU does the rest. GPU stays free.
+> **Reverse-engineered Apple Neural Engine** — the first standalone C API (`libane`) for Apple's private ANE framework. 76 private classes discovered, direct hardware access without CoreML.
 >
-> The first standalone C API (`libane`) for Apple's Neural Engine. Apple once offered public ANE training APIs (MLCompute, 2020) but deprecated them without replacement. CoreML only supports inference and last-layer fine-tuning. This project restores full ANE training via low-level private APIs — the expensive weight operations run on the ANE, everything else on CPU.
+> We unlocked **training on the ANE** (a world first) and then **rigorously benchmarked it against GPU**. Result: the ANE's real strength is **inference at 2x the energy efficiency of the GPU**. Training works but GPU is faster. [Full benchmark →](docs/ANE_VS_GPU_BENCHMARK.md)
 
 > [!IMPORTANT]
 > **How does the training actually work?**
@@ -40,10 +40,11 @@
 > | Classifier (vocab projection) | **CPU (AMX)** | Large BLAS sgemm, runs on Apple's matrix coprocessor |
 > | Data transfer (weights ↔ ANE) | **CPU → IOSurface → ANE** | Zero-copy via shared memory surfaces |
 >
-> **Measured time split** (Stories-110M, M3 Pro):
-> - ANE: **~40%** of each training step (all weight matmuls)
-> - CPU/AMX: **~45%** (optimizer, normalization, gradient BLAS)
-> - IOSurface transfer: **~15%**
+> **Measured time split** (Stories-110M, M3 Pro, [benchmarked](docs/ANE_VS_GPU_BENCHMARK.md)):
+> - ANE: **~24%** of each training step (all weight matmuls)
+> - CPU/AMX: **~59%** (optimizer, normalization, classifier, gradient BLAS)
+> - IOSurface transfer: **~9%**
+> - Other overhead: **~8%**
 >
 > **What about the GPU?** We built a hardware monitor (`hw_monitor.h`) that measures GPU utilization, GPU memory, CPU time, RAM, and thermal state every second during training. The results are clear:
 >
@@ -61,14 +62,14 @@
 >
 > **This IS:**
 > - Direct access to Apple's **private ANE API** (76 classes discovered, 35 exposed via libane)
-> - **ANE + CPU training** — the ANE does the heavy lifting, CPU handles optimizer and normalization
+> - **ANE + CPU training** — ANE handles matmuls (24% of step), CPU handles the rest (59%)
+> - **ANE inference at 2x energy efficiency** vs GPU — [measured with powermetrics](docs/ANE_VS_GPU_BENCHMARK.md)
 > - **FP16 native compute** — 12.8 TFLOPS ANE peak, 2.15 TFLOPS real training, 722 GFLOPS avg inference (power-efficient, not fastest)
 > - **1 compile → unlimited training steps** via Dynamic Spatial Packing
-> - **GPU verified free** — 0% utilization, 0 MB memory, measured with IOKit + Metal APIs
-> - **Built-in hardware monitoring** — every run logs CPU, GPU, memory, thermal to CSV
+> - **GPU verified free** — 0% utilization during ANE workloads
 >
 > **This is NOT:**
-> - A GPU competitor — CPU and GPU are faster at inference. ANE's advantage is **5-20x better power efficiency**, zero thermal impact, and running alongside CPU+GPU without contention
+> - A GPU competitor — GPU is 2.3x faster at training ([benchmark](docs/ANE_VS_GPU_BENCHMARK.md)), CPU/GPU are faster at inference. ANE's advantage is **2x better energy efficiency** and running alongside CPU+GPU without contention
 > - CoreML / Metal / MLX — we bypass Apple's public frameworks entirely
 > - Pure ANE training — each step is a collaboration between ANE (matmuls) and CPU (everything else)
 >
@@ -96,14 +97,14 @@
 
 ## Use Cases
 
-> The ANE is a **dedicated chip that sits idle** on every Mac. This project puts it to work — the ANE handles the expensive matmuls, CPU handles the rest, GPU stays free.
+> The ANE sits idle on every Mac. This project gives you direct access — for inference at 2x the energy efficiency of the GPU, and for experimental training that keeps the GPU free.
 
 | Use Case | What Happens |
 |:---|:---|
-| **Continuous Learning** | ANE accelerates training on your daily data (code, docs, emails) while you work. GPU stays free for your apps. |
-| **Overnight Fine-Tuning** | Start before bed, MacBook charges, ANE+CPU train. Morning: your model knows your codebase, your writing style, your patterns. |
+| **Energy-Efficient Inference** | ANE generates tokens at 87% of GPU speed but uses only 42% of the power. **2x more tokens per Joule.** |
+| **GPU-Free Training** | ANE+CPU train while GPU stays at 0%. Useful when GPU is busy with rendering, video, or other tasks. Note: CPU is heavily loaded (~60%). |
+| **Overnight Fine-Tuning** | Start before bed, MacBook charges, ANE+CPU train. Morning: your model knows your codebase. System draws ~8W (vs ~16W on GPU). |
 | **100% Private** | Data never leaves your device. No cloud, no API calls, no account. Everything stays on your Mac. |
-| **Low Impact** | GPU renders, ANE+CPU train. No fan noise, no GPU competition. CPU is partially loaded (~45%), but modern Macs handle this alongside normal work. |
 
 **Training Results** (M3 Pro, TinyStories 1B tokens):
 
@@ -129,9 +130,9 @@ Sample output (Stories-110M, temp=0.5):
 - **Pre-training large LLMs** — ANE peak is 2.15 TFLOPS real training. A 7B model would take weeks.
 - **Image generation** — Diffusion models need GPU-level throughput and VRAM.
 - **Anything >1B parameters** — The ANE's 32MB SRAM and FP16 pipeline are designed for small, focused models.
-- **Beating the GPU** — MLX/Metal is faster. ANE's advantage is running *alongside* the GPU, not replacing it.
+- **Beating the GPU at training** — GPU is [2.3x faster](docs/ANE_VS_GPU_BENCHMARK.md). ANE's advantage is energy-efficient inference and keeping the GPU free.
 
-For the right workload (small models, continuous learning, background fine-tuning), the ANE is uniquely useful — because it's the only accelerator on your Mac that isn't busy.
+For the right workload (inference, small model fine-tuning, background training), the ANE is useful — it's the only accelerator on your Mac that isn't busy, and it's 2x more energy-efficient for inference.
 
 </details>
 
@@ -229,6 +230,41 @@ Interactive menu — builds everything automatically.
 
 > [!TIP]
 > `./ane` detects your hardware, **measures ANE peak TFLOPS automatically** (~1s), builds all binaries on first run, and guides you through everything. You don't need to know any Makefiles or paths.
+
+---
+
+## Data Setup
+
+The code and tokenizer are included in the repo. **Training data must be downloaded separately** (~2 GB):
+
+```bash
+# Download pretokenized TinyStories (Llama2 BPE, 32K vocab, ~993 MB compressed)
+cd training
+bash download_data.sh                # All 50 shards → tinystories_all.bin (~2 GB)
+bash download_data.sh --shard 0      # Single shard → tinystories_data00.bin (~40 MB, for quick tests)
+bash download_data.sh --shards 10    # First 10 shards (~400 MB)
+```
+
+Source: [enio/TinyStories](https://huggingface.co/datasets/enio/TinyStories) on HuggingFace (pretokenized with [karpathy/llama2.c](https://github.com/karpathy/llama2.c)).
+
+**Model checkpoints** are generated during training (`ane_*_ckpt.bin`). To reproduce from scratch:
+
+```bash
+# Quick test (Tiny-ANE 15M, single shard, ~minutes)
+cd training/training_dynamic
+make MODEL=tiny_ane && ./train --data ../tinystories_data00.bin --scratch
+
+# Full training (Stories-110M, all data, ~hours)
+make MODEL=stories110m && ./train --data ../tinystories_all.bin --scratch
+```
+
+| What | In repo? | How to get |
+|:-----|:---------|:-----------|
+| Source code, Makefiles, scripts | Yes | `git clone` |
+| Tokenizer (`assets/models/tokenizer.bin`) | Yes | `git clone` |
+| Benchmark scripts + results | Yes | `git clone` |
+| Training data (`tinystories_*.bin`) | No (2 GB) | `bash training/download_data.sh` |
+| Model checkpoints (`ane_*_ckpt.bin`) | No | Generated by training |
 
 ---
 
@@ -637,6 +673,21 @@ Full API documentation: **[libane/README.md](libane/README.md)**
 | QoS Background vs Default | **42% faster** | Less scheduling overhead |
 | Thermal under Load | **Nominal (cool)** | No throttling after 10s sustained |
 
+### ANE vs GPU — Same Chip, Same Model
+
+We benchmarked the **same Llama2-style models** on ANE (libane) vs GPU (PyTorch MPS) on the same M3 Pro — both inference and training:
+
+| Task | Model | ANE | GPU (MPS) | Speed | Energy/unit |
+|:-----|:------|---:|---:|:---|:---|
+| **Inference** | Stories-110M | 41.3 tok/s | 47.8 tok/s | GPU 1.2x | **ANE 2.0x better** |
+| Training | Stories-110M | 0.64 TFLOPS | 1.50 TFLOPS | GPU 2.3x | ~equal |
+
+**Inference:** ANE runs at **87% of GPU speed** but uses only **42% of the power** (4.6W vs 10.9W). Result: **2x more tokens per Joule** — this is why Apple routes CoreML to the ANE.
+
+**Training:** GPU is 2.3x faster and slightly more energy-efficient per step (13.8 J vs 15.2 J). But ANE draws only 8.1W vs 16.2W — useful for thermal-constrained or battery scenarios.
+
+> Full analysis, hardware breakdown, and reproduction steps: **[docs/ANE_VS_GPU_BENCHMARK.md](docs/ANE_VS_GPU_BENCHMARK.md)**
+
 > [!NOTE]
 > Apple's "18 TOPS" is an INT8 peak theoretical number. The 12.79 TFLOPS peak is measured with 128x stacked convolutions that amortize all overhead -- it represents raw ANE silicon capability, not what you get during training. Real training throughput (2.15 TFLOPS) includes per-layer dispatch, IOSurface I/O, and CPU gradient computation. **Run `./ane bench` to measure your chip's peak.**
 
@@ -797,7 +848,7 @@ Based on Stories110M (124 vocab, compacted), measured on M3 Pro = 80.9 ms/step (
 </details>
 
 > [!IMPORTANT]
-> The GPU Neural Accelerators in the M5 are accessible via **Metal/MLX**, **not** via the private ANE APIs that `libane` uses. For max throughput, use MLX. ANE training's advantage is running **in the background** without blocking the GPU — ideal for training while you work.
+> The GPU Neural Accelerators in the M5 are accessible via **Metal/MLX**, **not** via the private ANE APIs that `libane` uses. For max throughput, use MLX. ANE's proven advantage is **2x energy-efficient inference**. ANE training keeps the GPU free but loads the CPU (~60%).
 
 ---
 
@@ -916,8 +967,16 @@ ANE-Training/
 │   ├── forward.h / backward.h          Forward/backward pass implementations
 │   └── Makefile
 │
+├── benchmark/ ························· ANE vs GPU Benchmark Suite
+│   ├── gpu_train.py / gpu_inference.py  PyTorch MPS baselines
+│   ├── run_benchmark.sh                 Training benchmark (speed)
+│   ├── run_inference_benchmark.sh       Inference benchmark (speed)
+│   ├── run_power_benchmark.sh           Power & energy (requires sudo)
+│   └── results/                         JSON + logs
+│
 ├── docs/ ······························ Research Documentation
-│   ├── ANE_USE_CASES.md                Use cases, throughput, continuous learning vision
+│   ├── ANE_VS_GPU_BENCHMARK.md         ANE vs GPU: speed, power, energy (measured)
+│   ├── ANE_USE_CASES.md                Use cases, throughput, honest assessment
 │   ├── ANE_MONITORING.md               Thermal, device info, what's measurable
 │   ├── ANE_PERFORMANCE_TUNING.md       Sweep results, optimal parameters
 │   ├── ANE_COMPILER_OPTIONS.md         Runtime option keys, KeepMemoryWired
