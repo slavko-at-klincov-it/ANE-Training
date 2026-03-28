@@ -1,8 +1,9 @@
-# Inference Benchmark: CPU vs GPU vs ANE (M3 Pro)
+# Inference Benchmark: CPU vs GPU vs ANE
 
 ## Hardware
 
-- **Chip:** Apple M3 Pro (h15g, 16 ANE cores)
+- **M3 Pro:** Apple M3 Pro (h15g, 11-core CPU, 14-core GPU, 16 ANE cores, 18GB)
+- **M4:** Apple M4 Mac Mini (h16g, 10-core CPU, 10-core GPU, 16 ANE cores, 16GB)
 - **macOS:** 15+
 - **Thermal:** Nominal (cool) throughout all measurements
 
@@ -21,6 +22,8 @@ Single matmul inference latency and throughput across 4 backends:
 
 ## Throughput Results (GFLOPS)
 
+### M3 Pro (h15g)
+
 | Workload | CPU | GPU (serial) | GPU (batched) | ANE |
 |----------|----:|-------------:|--------------:|----:|
 | Small (256x256, seq=64) | 1347.7 | 45.1 | 216.6 | 42.5 |
@@ -31,6 +34,21 @@ Single matmul inference latency and throughput across 4 backends:
 | Proj (3072x768, seq=64) | 1737.7 | 704.3 | 2468.2 | 1090.2 |
 | Huge (2048x2048, seq=64) | 621.3 | 1025.9 | 3371.0 | 1406.9 |
 | **Average** | **1448.8** | **473.9** | **1828.4** | **721.7** |
+
+### M4 (h16g)
+
+| Workload | CPU | GPU (serial) | GPU (batched) | ANE |
+|----------|----:|-------------:|--------------:|----:|
+| Small (256x256, seq=64) | 1157.2 | 22.9 | 210.6 | 106.8 |
+| Medium (512x512, seq=64) | 1710.2 | 96.5 | 914.8 | 452.7 |
+| Large (768x768, seq=64) | 1765.7 | 210.6 | 939.3 | 853.0 |
+| XL (1024x1024, seq=64) | 1661.9 | 275.6 | 1234.3 | **1314.0** |
+| FFN (768x3072, seq=64) | 958.2 | 471.8 | 1747.5 | **1785.0** |
+| Proj (3072x768, seq=64) | 1311.6 | 485.8 | 1716.8 | **1722.0** |
+| Huge (2048x2048, seq=64) | 718.8 | 729.7 | **2363.1** | 2328.3 |
+| **Average** | **1326.2** | **327.6** | **1303.8** | **1223.1** |
+
+> **M4 ANE improvement:** Average 1223 GFLOPS (vs 722 on M3 Pro = **+69%**). ANE now surpasses CPU at 1024x1024 and above. On M3 Pro, CPU was faster at all shapes.
 
 ## Latency Results (ms per inference)
 
@@ -46,11 +64,13 @@ Single matmul inference latency and throughput across 4 backends:
 
 ## Key Findings
 
-1. **CPU (AMX/Accelerate) dominates small-to-medium shapes.** Fastest at every workload up to 1024x1024. The AMX coprocessor delivers 1449 GFLOPS average in FP32 with sub-millisecond latency.
+1. **CPU (AMX/Accelerate) dominates small-to-medium shapes.** Fastest at every workload up to 1024x1024 on both chips. The AMX coprocessor delivers ~1350-1450 GFLOPS average in FP32 with sub-millisecond latency.
 
-2. **GPU batched wins at large shapes.** Peaks at 3394 GFLOPS on FFN workloads, 1828 GFLOPS average. But GPU serial (realistic single-inference) is only 474 GFLOPS due to command buffer overhead.
+2. **GPU batched wins at large shapes (M3 Pro).** Peaks at 3394 GFLOPS on FFN workloads, 1828 GFLOPS average on M3 Pro (14 GPU cores). On M4 (10 GPU cores), GPU batched averages only 1304 GFLOPS.
 
-3. **ANE has ~0.2ms fixed dispatch overhead.** This makes it uncompetitive at small shapes (42.5 GFLOPS at 256x256). ANE only becomes competitive at 2048x2048 (1407 GFLOPS).
+3. **ANE has ~0.07-0.2ms fixed dispatch overhead.** This makes it uncompetitive at small shapes. However, on M4 (h16g), ANE surpasses CPU starting at 1024x1024 (1314 vs 1662 GFLOPS). On M3 Pro, CPU was faster at all shapes.
+
+4. **M4 ANE is 69% faster than M3 Pro ANE** on average (1223 vs 722 GFLOPS). The h16g architecture is a significant improvement over h15g.
 
 4. **ANE uses FP16, CPU/GPU use FP32.** This is the natural precision of each backend, not an unfair comparison. ANE hardware is FP16-native.
 

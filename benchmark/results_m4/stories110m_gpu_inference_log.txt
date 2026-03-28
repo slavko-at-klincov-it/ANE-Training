@@ -1,0 +1,24 @@
+/opt/homebrew/lib/python3.14/site-packages/torch/_subclasses/functional_tensor.py:307: UserWarning: Failed to initialize NumPy: No module named 'numpy' (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:84.)
+  cpu = _conversion_method_template(device=torch.device("cpu"))
+Loading checkpoint: /Users/slavkoklincov/Documents/ClaudeCodeFolder/ANE-Training/benchmark/../training/training_dynamic/ane_stories110M_dyn_ckpt.bin
+  Checkpoint loaded
+Model: Stories-110M on GPU (MPS)
+Params: 85.0M
+
+Inference benchmark: 100 tokens, seq_len=256
+Mode: Full-sequence recompute (no KV cache — matches ANE)
+============================================================
+  token    1  30.1 ms  33.2 tok/s  1.44 TFLOPS
+  token   20  30.3 ms  33.0 tok/s  1.43 TFLOPS
+  token   40  30.2 ms  33.1 tok/s  1.44 TFLOPS
+  token   60  30.3 ms  33.0 tok/s  1.44 TFLOPS
+  token   80  30.2 ms  33.1 tok/s  1.44 TFLOPS
+  token  100  29.9 ms  33.4 tok/s  1.45 TFLOPS
+
+============================================================
+GPU (MPS) Inference Complete — Stories-110M
+  Tokens: 100
+  Avg: 30.3 ms/token  (33.0 tokens/sec)
+  Throughput: 1.43 TFLOPS
+  Total: 3.1s
+  Saved to /Users/slavkoklincov/Documents/ClaudeCodeFolder/ANE-Training/benchmark/results/stories110m_gpu_inference.json

@@ -1,6 +1,6 @@
 # Model Size Benchmark — Training Performance Across Scales
 
-> Measured on M3 Pro (h15g), 16 ANE cores, 18 GB RAM.
+> Measured on M3 Pro (h15g, 18 GB) and M4 (h16g, 16 GB).
 > Both synthetic per-step timing AND real training runs.
 
 ---
@@ -23,11 +23,12 @@ Actual training run, random init, 100 steps:
 
 Overlaps CPU backward of step N with ANE forward of step N+1:
 
-| Metric | Value |
-|:---|:---|
-| **ms/step (sustained)** | **80.9 ms** |
-| **Total TFLOPS** | **2.15** (ANE + CPU combined) |
-| **Improvement** | 13% faster than sequential |
+| Metric | M3 Pro | M4 |
+|:---|:---|:---|
+| **ms/step (sustained)** | **80.9 ms** | **71.8 ms** |
+| **Total TFLOPS** | **2.15** | **2.43** |
+| **ANE TFLOPS** | — | 1.47 |
+| **Improvement vs sequential** | 13% faster | 23% faster |
 
 ### Why 2.15 TFLOPS and Not 12.79?
 
@@ -106,22 +107,35 @@ To train larger:
 | **INT8 W8A8** (M4+ only) | All sizes | +88% ANE throughput |
 | **FP16 training** | 600M+ | 2x memory savings → larger models fit |
 
-### Estimated Training Times (Real, M3 Pro)
+### Estimated Training Times (Real)
 
-| Model | ms/step (seq.) | ms/step (pipeline) | Steps for 1M tokens | Time (pipeline) |
-|:---|:---|:---|:---|:---|
-| Tiny-1M | ~3ms | ~3ms | 15,625 (seq=64) | ~47s |
-| Small-15M | ~12ms | ~11ms | 7,812 (seq=128) | ~1.4 min |
-| Medium-42M | ~35ms | ~30ms | 3,906 (seq=256) | ~2.0 min |
-| **Stories-110M** | **93ms** | **80.9ms** | **3,906** | **~5.3 min** |
-| Medium-250M | ~240ms | ~210ms | 3,906 | ~13.7 min |
-| Large-600M | ~450ms | ~390ms | 3,906 | ~25.4 min |
+| Model | M3 Pro seq. | M3 Pro pipeline | M4 seq. | M4 pipeline | Steps for 1M tokens |
+|:---|:---|:---|:---|:---|:---|
+| Tiny-1M | ~3ms | ~3ms | — | — | 15,625 (seq=64) |
+| Small-15M | ~12ms | ~11ms | — | — | 7,812 (seq=128) |
+| Medium-42M | ~35ms | ~30ms | — | — | 3,906 (seq=256) |
+| **Stories-110M** | **93ms** | **80.9ms** | **93.1ms** | **71.8ms** | **3,906** |
+| Medium-250M | ~240ms | ~210ms | — | — | 3,906 |
+| Large-600M | ~450ms | ~390ms | — | — | 3,906 |
 
 Real times include IOSurface overhead (~2.4x synthetic benchmark).
 First batch adds ~5s compilation overhead.
-Stories-110M measured: sequential = 1.87 TFLOPS, pipeline = 2.15 TFLOPS.
+Stories-110M measured: M3 Pro sequential = 1.87 TFLOPS, pipeline = 2.15 TFLOPS. M4 pipeline = 2.43 TFLOPS.
 
 ---
 
-*Last updated: 2026-03-19 | M3 Pro (h15g), macOS 26.3.1 (25D2128)*
-*Source: `training/bench_model_sizes.m`, `training/train_large_ane`*
+### Model Sweep (M4, 200 Steps Each)
+
+| Model | Params | ms/step | Loss@0 | Loss@100 | Loss@200 | Compile |
+|:------|-------:|--------:|-------:|---------:|---------:|--------:|
+| tiny_ane | 13.3M | 26.0 | 9.16 | 5.89 | 6.18 | 345ms |
+| small_ane | 27.6M | 41.0 | 9.11 | 5.89 | 6.15 | 347ms |
+| medium_ane | 43.7M | 49.7 | 9.10 | 5.90 | 6.05 | 365ms |
+| wide_ane | 52.4M | 47.8 | 9.16 | 5.87 | 5.92 | 414ms |
+
+> See [ANE_M4_BENCHMARK.md](ANE_M4_BENCHMARK.md) for complete M4 training results including long runs and stability analysis.
+
+---
+
+*Last updated: 2026-03-28 | M3 Pro (h15g) + M4 (h16g)*
+*Source: `training/bench_model_sizes.m`, `training/train_large_ane`, `benchmark/results_m4/`*

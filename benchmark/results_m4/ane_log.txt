@@ -1,0 +1,537 @@
+=== ANE Dynamic Training: Tiny-ANE-15M (6 layers, GQA 4/4 heads) ===
+dim=256 q_dim=256 kv_dim=256 hd=64 hidden=768 seq=256 vocab=32000
+Params: 13.3M (transformer 5.1M + embed 8.2M)
+Kernels: 10 compiled (sdpaFwd+woFwd, ffnFused, ffnBwdW2t+W13t, wotBwd, sdpaBwd1+2, qBwd+kvBwd)
+Accum 10 steps, LR=0.0003
+Hardware: ANE (matmuls via MIL kernels) + CPU (RMSNorm, SiLU, Adam, BLAS dW)
+  Note: Accelerate BLAS (cblas_sgemm) may use GPU/AMX for classifier + dW ops
+FLOPs/step: fwd=2617.2M total=7851.7M
+  Training from scratch (random init)
+Token data: 500000 tokens (1.0 MB)
+Vocab compaction: 32000 → 31999 active tokens (1.0x reduction)
+Compiling 10 dynamic kernels (one-time)...
+  Compiling sdpaFwd (GQA)...
+  Compiling woFwd...
+  Compiling ffnFused...
+  Compiling ffnBwdW2t...
+  Compiling ffnBwdW13t...
+  Compiling wotBwd...
+  Compiling sdpaBwd1 (GQA)...
+  Compiling sdpaBwd2 (GQA)...
+  Compiling qBwd...
+  Compiling kvBwd...
+Compiled 10 kernels in 489ms (shared across all 6 layers)
+Allocating per-layer IOSurfaces...
+Per-layer weight staging complete
+
+    L0 sdpa_bwd: |dq|=0.042168 |dk|=0.046834 |dv|=0.590820
+  hardware: ANE=13.8ms  CPU=67.5ms  IO=4.5ms  (ane_f=4.3 ane_b=9.5 rms=1.5 silu=1.9 cls=62.8)
+step 0    loss=10.3701  lr=3.00e-04  88.7ms/step  x[-1.03,1.10] dy[-2.632e+01,2.654e+01]
+  grad_norm=0.7346  attn=0.5234 ffn=0.1862 embed=0.4806
+    L0: |g|=0.2919    L3: |g|=0.1629    L5: |g|=0.1224
+    L0 sdpa_bwd: |dq|=0.036525 |dk|=0.044630 |dv|=0.495117
+  hardware: ANE=11.8ms  CPU=72.9ms  IO=2.2ms  (ane_f=4.2 ane_b=7.6 rms=1.1 silu=1.5 cls=69.8)
+step 10   loss=10.3936  lr=3.00e-05  89.1ms/step  x[-0.94,0.91] dy[-2.408e+01,2.254e+01]
+  grad_norm=0.7019  attn=0.5043 ffn=0.1804 embed=0.4535
+    L0: |g|=0.2788    L3: |g|=0.1606    L5: |g|=0.1260
+    L0 sdpa_bwd: |dq|=0.046511 |dk|=0.056396 |dv|=0.701660
+  hardware: ANE=12.4ms  CPU=74.8ms  IO=2.2ms  (ane_f=4.4 ane_b=8.0 rms=1.1 silu=1.5 cls=71.7)
+step 20   loss=10.3994  lr=6.00e-05  91.7ms/step  x[-0.88,0.90] dy[-2.867e+01,3.170e+01]
+  grad_norm=0.7485  attn=0.5331 ffn=0.1913 embed=0.4892
+    L0: |g|=0.3077    L3: |g|=0.1618    L5: |g|=0.1203
+    L0 sdpa_bwd: |dq|=0.040862 |dk|=0.047704 |dv|=0.657227
+  hardware: ANE=12.0ms  CPU=78.0ms  IO=2.2ms  (ane_f=3.7 ane_b=8.3 rms=1.1 silu=1.5 cls=74.9)
+step 30   loss=10.3966  lr=9.00e-05  94.5ms/step  x[-1.20,0.98] dy[-2.635e+01,2.544e+01]
+  grad_norm=0.7044  attn=0.5022 ffn=0.1776 embed=0.4609
+    L0: |g|=0.2832    L3: |g|=0.1567    L5: |g|=0.1223
+    L0 sdpa_bwd: |dq|=0.021682 |dk|=0.034347 |dv|=0.608887
+  hardware: ANE=11.8ms  CPU=78.3ms  IO=2.2ms  (ane_f=4.0 ane_b=7.7 rms=1.1 silu=1.5 cls=75.2)
+step 40   loss=10.3929  lr=1.20e-04  94.5ms/step  x[-1.04,1.05] dy[-2.764e+01,2.569e+01]
+  grad_norm=0.6854  attn=0.4901 ffn=0.1724 embed=0.4471
+    L0: |g|=0.2688    L3: |g|=0.1541    L5: |g|=0.1225
+    L0 sdpa_bwd: |dq|=0.044220 |dk|=0.048279 |dv|=0.493652
+  hardware: ANE=13.2ms  CPU=78.4ms  IO=2.3ms  (ane_f=5.0 ane_b=8.3 rms=1.1 silu=1.5 cls=75.3)
+step 50   loss=10.4086  lr=1.50e-04  96.1ms/step  x[-0.87,0.88] dy[-2.602e+01,2.437e+01]
+  grad_norm=0.7076  attn=0.4998 ffn=0.1745 embed=0.4695
+    L0: |g|=0.2808    L3: |g|=0.1559    L5: |g|=0.1196
+    L0 sdpa_bwd: |dq|=0.039385 |dk|=0.053986 |dv|=0.607910
+  hardware: ANE=12.8ms  CPU=78.7ms  IO=2.2ms  (ane_f=4.9 ane_b=7.9 rms=1.1 silu=1.5 cls=75.6)
+step 60   loss=10.3621  lr=1.80e-04  95.8ms/step  x[-0.99,0.97] dy[-2.300e+01,2.396e+01]
+  grad_norm=0.6929  attn=0.4875 ffn=0.1758 embed=0.4599
+    L0: |g|=0.2735    L3: |g|=0.1537    L5: |g|=0.1199
+    L0 sdpa_bwd: |dq|=0.025271 |dk|=0.042265 |dv|=0.559082
+  hardware: ANE=12.8ms  CPU=77.3ms  IO=2.3ms  (ane_f=4.2 ane_b=8.6 rms=1.1 silu=1.5 cls=74.2)
+step 70   loss=10.3903  lr=2.10e-04  94.7ms/step  x[-1.06,1.22] dy[-2.374e+01,2.299e+01]
+  grad_norm=0.7014  attn=0.4965 ffn=0.1798 embed=0.4616
+    L0: |g|=0.2835    L3: |g|=0.1539    L5: |g|=0.1203
+    L0 sdpa_bwd: |dq|=0.045076 |dk|=0.035403 |dv|=0.595215
+  hardware: ANE=12.6ms  CPU=76.8ms  IO=2.2ms  (ane_f=4.6 ane_b=8.0 rms=1.1 silu=1.5 cls=73.7)
+step 80   loss=10.3912  lr=2.40e-04  93.8ms/step  x[-1.28,0.91] dy[-3.207e+01,3.301e+01]
+  grad_norm=0.6789  attn=0.4753 ffn=0.1718 embed=0.4533
+    L0: |g|=0.2668    L3: |g|=0.1459    L5: |g|=0.1150
+    L0 sdpa_bwd: |dq|=0.048915 |dk|=0.037689 |dv|=0.404053
+  hardware: ANE=15.1ms  CPU=70.8ms  IO=2.2ms  (ane_f=4.9 ane_b=10.2 rms=1.1 silu=1.4 cls=67.8)
+step 90   loss=10.4069  lr=2.70e-04  90.4ms/step  x[-1.04,0.92] dy[-1.827e+01,2.315e+01]
+  grad_norm=0.6949  attn=0.4840 ffn=0.1767 embed=0.4663
+    L0: |g|=0.2779    L3: |g|=0.1497    L5: |g|=0.1166
+  [ckpt saved, best_loss=10.3849]
+    L0 sdpa_bwd: |dq|=0.028429 |dk|=0.024033 |dv|=0.398926
+  hardware: ANE=12.7ms  CPU=69.9ms  IO=2.2ms  (ane_f=4.5 ane_b=8.2 rms=1.1 silu=1.5 cls=66.9)
+step 100  loss=10.3826  lr=3.00e-04  87.0ms/step  x[-0.97,0.95] dy[-1.996e+01,2.025e+01]
+  grad_norm=0.7450  attn=0.5135 ffn=0.1812 embed=0.5083
+    L0: |g|=0.3097    L3: |g|=0.1485    L5: |g|=0.1145
+    L0 sdpa_bwd: |dq|=0.069339 |dk|=0.096054 |dv|=0.729004
+  hardware: ANE=12.6ms  CPU=63.2ms  IO=2.4ms  (ane_f=4.2 ane_b=8.4 rms=1.1 silu=1.6 cls=59.9)
+step 110  loss=10.3697  lr=3.00e-04  80.4ms/step  x[-1.26,1.07] dy[-3.673e+01,3.854e+01]
+  grad_norm=0.6763  attn=0.4704 ffn=0.1679 embed=0.4558
+    L0: |g|=0.2689    L3: |g|=0.1420    L5: |g|=0.1119
+    L0 sdpa_bwd: |dq|=0.022964 |dk|=0.043203 |dv|=0.318848
+  hardware: ANE=13.9ms  CPU=67.6ms  IO=2.2ms  (ane_f=4.8 ane_b=9.1 rms=1.1 silu=1.5 cls=64.5)
+step 120  loss=10.3813  lr=3.00e-04  85.8ms/step  x[-1.16,1.18] dy[-1.517e+01,1.298e+01]
+  grad_norm=0.6844  attn=0.4594 ffn=0.1634 embed=0.4803
+    L0: |g|=0.2695    L3: |g|=0.1363    L5: |g|=0.1095
+    L0 sdpa_bwd: |dq|=0.028640 |dk|=0.039183 |dv|=0.387207
+  hardware: ANE=12.9ms  CPU=64.9ms  IO=2.2ms  (ane_f=4.3 ane_b=8.6 rms=1.1 silu=1.5 cls=61.9)
+step 130  loss=10.3898  lr=2.99e-04  82.2ms/step  x[-1.20,1.05] dy[-1.862e+01,1.485e+01]
+  grad_norm=0.6198  attn=0.4182 ffn=0.1478 embed=0.4328
+    L0: |g|=0.2295    L3: |g|=0.1325    L5: |g|=0.1098
+    L0 sdpa_bwd: |dq|=0.034164 |dk|=0.053192 |dv|=0.524414
+  hardware: ANE=12.2ms  CPU=89.4ms  IO=2.4ms  (ane_f=3.8 ane_b=8.4 rms=1.2 silu=1.6 cls=86.1)
+step 140  loss=10.3828  lr=2.99e-04  106.7ms/step  x[-1.06,1.32] dy[-2.219e+01,2.840e+01]
+  grad_norm=0.6314  attn=0.4274 ffn=0.1517 embed=0.4393
+    L0: |g|=0.2441    L3: |g|=0.1348    L5: |g|=0.1070
+    L0 sdpa_bwd: |dq|=0.044383 |dk|=0.049042 |dv|=0.716309
+  hardware: ANE=13.3ms  CPU=83.7ms  IO=2.3ms  (ane_f=4.0 ane_b=9.3 rms=1.2 silu=1.5 cls=80.6)
+step 150  loss=10.3670  lr=2.98e-04  101.6ms/step  x[-1.18,1.10] dy[-4.736e+01,3.211e+01]
+  grad_norm=0.6358  attn=0.4175 ffn=0.1508 embed=0.4551
+    L0: |g|=0.2430    L3: |g|=0.1295    L5: |g|=0.1040
+    L0 sdpa_bwd: |dq|=0.026670 |dk|=0.045043 |dv|=0.525391
+  hardware: ANE=12.5ms  CPU=73.7ms  IO=2.2ms  (ane_f=4.9 ane_b=7.7 rms=1.1 silu=1.5 cls=70.5)
+step 160  loss=10.3989  lr=2.97e-04  90.6ms/step  x[-1.20,1.12] dy[-2.352e+01,2.202e+01]
+  grad_norm=0.6832  attn=0.4564 ffn=0.1626 embed=0.4816
+    L0: |g|=0.2758    L3: |g|=0.1338    L5: |g|=0.1098
+    L0 sdpa_bwd: |dq|=0.033851 |dk|=0.033478 |dv|=0.553711
+  hardware: ANE=13.5ms  CPU=74.5ms  IO=2.3ms  (ane_f=3.9 ane_b=9.7 rms=1.1 silu=1.6 cls=71.3)
+step 170  loss=10.3816  lr=2.96e-04  92.7ms/step  x[-0.98,1.06] dy[-2.291e+01,2.169e+01]
+  grad_norm=0.6950  attn=0.4597 ffn=0.1691 embed=0.4929
+    L0: |g|=0.2815    L3: |g|=0.1329    L5: |g|=0.1054
+    L0 sdpa_bwd: |dq|=0.027993 |dk|=0.024121 |dv|=0.408203
+  hardware: ANE=13.3ms  CPU=75.8ms  IO=2.2ms  (ane_f=5.9 ane_b=7.4 rms=1.1 silu=1.5 cls=72.7)
+step 180  loss=10.3987  lr=2.95e-04  93.5ms/step  x[-1.05,1.25] dy[-1.892e+01,2.283e+01]
+  grad_norm=0.5962  attn=0.3915 ffn=0.1386 embed=0.4277
+    L0: |g|=0.2186    L3: |g|=0.1218    L5: |g|=0.1037
+    L0 sdpa_bwd: |dq|=0.038724 |dk|=0.051208 |dv|=0.317627
+  hardware: ANE=12.0ms  CPU=76.6ms  IO=2.3ms  (ane_f=4.2 ane_b=7.9 rms=1.2 silu=1.6 cls=73.4)
+step 190  loss=10.3951  lr=2.94e-04  93.4ms/step  x[-1.44,1.12] dy[-2.349e+01,1.945e+01]
+  grad_norm=0.6483  attn=0.4215 ffn=0.1497 embed=0.4692
+    L0: |g|=0.2562    L3: |g|=0.1208    L5: |g|=0.1026
+  [ckpt saved, best_loss=10.3826]
+    L0 sdpa_bwd: |dq|=0.037744 |dk|=0.040497 |dv|=0.554688
+  hardware: ANE=12.0ms  CPU=65.6ms  IO=2.2ms  (ane_f=4.0 ane_b=8.0 rms=1.1 silu=1.5 cls=62.5)
+step 200  loss=10.4008  lr=2.92e-04  82.0ms/step  x[-1.11,1.23] dy[-2.736e+01,2.947e+01]
+  grad_norm=0.5526  attn=0.3478 ffn=0.1223 embed=0.4116
+    L0: |g|=0.1930    L3: |g|=0.1122    L5: |g|=0.0956
+    L0 sdpa_bwd: |dq|=0.025554 |dk|=0.023757 |dv|=0.452148
+  hardware: ANE=11.5ms  CPU=73.5ms  IO=2.2ms  (ane_f=4.0 ane_b=7.5 rms=1.1 silu=1.7 cls=70.2)
+step 210  loss=10.4014  lr=2.90e-04  89.4ms/step  x[-1.06,1.46] dy[-1.954e+01,2.355e+01]
+  grad_norm=0.6884  attn=0.4405 ffn=0.1656 embed=0.5023
+    L0: |g|=0.2835    L3: |g|=0.1216    L5: |g|=0.0998
+    L0 sdpa_bwd: |dq|=0.044610 |dk|=0.055715 |dv|=0.548340
+  hardware: ANE=15.2ms  CPU=65.5ms  IO=2.2ms  (ane_f=5.6 ane_b=9.6 rms=1.1 silu=1.5 cls=62.4)
+step 220  loss=10.4049  lr=2.89e-04  85.2ms/step  x[-1.25,1.26] dy[-2.396e+01,2.277e+01]
+  grad_norm=0.5402  attn=0.3379 ffn=0.1173 embed=0.4048
+    L0: |g|=0.1863    L3: |g|=0.1073    L5: |g|=0.0953
+    L0 sdpa_bwd: |dq|=0.083247 |dk|=0.064514 |dv|=0.361084
+  hardware: ANE=13.5ms  CPU=69.7ms  IO=2.3ms  (ane_f=4.1 ane_b=9.4 rms=1.2 silu=1.5 cls=66.5)
+step 230  loss=10.3897  lr=2.87e-04  88.1ms/step  x[-1.50,1.06] dy[-2.243e+01,2.406e+01]
+  grad_norm=0.5127  attn=0.3107 ffn=0.1101 embed=0.3926
+    L0: |g|=0.1718    L3: |g|=0.1008    L5: |g|=0.0899
+    L0 sdpa_bwd: |dq|=0.032818 |dk|=0.031860 |dv|=0.344482
+  hardware: ANE=14.6ms  CPU=86.6ms  IO=2.5ms  (ane_f=5.7 ane_b=8.9 rms=1.2 silu=1.7 cls=83.1)
+step 240  loss=10.3991  lr=2.84e-04  106.0ms/step  x[-1.33,1.45] dy[-1.998e+01,2.010e+01]
+  grad_norm=0.6112  attn=0.3796 ffn=0.1392 embed=0.4583
+    L0: |g|=0.2308    L3: |g|=0.1106    L5: |g|=0.0927
+    L0 sdpa_bwd: |dq|=0.031856 |dk|=0.036269 |dv|=0.317383
+  hardware: ANE=15.7ms  CPU=83.1ms  IO=2.3ms  (ane_f=5.5 ane_b=10.1 rms=1.2 silu=1.6 cls=79.8)
+step 250  loss=10.3888  lr=2.82e-04  103.4ms/step  x[-1.37,1.40] dy[-1.772e+01,1.203e+01]
+  grad_norm=0.8314  attn=0.4994 ffn=0.1806 embed=0.6397
+    L0: |g|=0.3404    L3: |g|=0.1220    L5: |g|=0.0967
+    L0 sdpa_bwd: |dq|=0.046557 |dk|=0.050261 |dv|=0.677246
+  hardware: ANE=14.6ms  CPU=84.8ms  IO=2.5ms  (ane_f=5.1 ane_b=9.6 rms=1.2 silu=1.6 cls=81.4)
+step 260  loss=10.3735  lr=2.80e-04  104.4ms/step  x[-1.56,1.35] dy[-2.215e+01,2.641e+01]
+  grad_norm=0.5163  attn=0.3015 ffn=0.1039 embed=0.4059
+    L0: |g|=0.1701    L3: |g|=0.0951    L5: |g|=0.0859
+    L0 sdpa_bwd: |dq|=0.167435 |dk|=0.167725 |dv|=2.255859
+  hardware: ANE=16.1ms  CPU=80.1ms  IO=2.4ms  (ane_f=5.8 ane_b=10.3 rms=1.2 silu=1.7 cls=76.7)
+step 270  loss=10.3920  lr=2.77e-04  101.0ms/step  x[-1.55,1.50] dy[-1.312e+02,1.006e+02]
+  grad_norm=0.6782  attn=0.4094 ffn=0.1456 embed=0.5206
+    L0: |g|=0.2653    L3: |g|=0.1113    L5: |g|=0.0905
+    L0 sdpa_bwd: |dq|=0.050753 |dk|=0.033905 |dv|=0.450195
+  hardware: ANE=15.5ms  CPU=83.9ms  IO=2.3ms  (ane_f=5.5 ane_b=10.0 rms=1.1 silu=1.6 cls=80.7)
+step 280  loss=10.4336  lr=2.74e-04  104.3ms/step  x[-1.29,1.44] dy[-2.806e+01,2.381e+01]
+  grad_norm=0.7177  attn=0.4391 ffn=0.1576 embed=0.5452
+    L0: |g|=0.2978    L3: |g|=0.1120    L5: |g|=0.0924
+    L0 sdpa_bwd: |dq|=0.033720 |dk|=0.035748 |dv|=0.396973
+  hardware: ANE=13.0ms  CPU=66.3ms  IO=2.2ms  (ane_f=4.6 ane_b=8.5 rms=1.1 silu=1.5 cls=63.2)
+step 290  loss=10.4082  lr=2.72e-04  83.8ms/step  x[-1.34,1.41] dy[-1.861e+01,2.216e+01]
+  grad_norm=0.4643  attn=0.2647 ffn=0.0890 embed=0.3709
+    L0: |g|=0.1402    L3: |g|=0.0883    L5: |g|=0.0812
+  [ckpt saved, best_loss=10.3777]
+    L0 sdpa_bwd: |dq|=0.030081 |dk|=0.034363 |dv|=0.312500
+  hardware: ANE=12.1ms  CPU=71.2ms  IO=2.3ms  (ane_f=4.0 ane_b=8.1 rms=1.1 silu=1.6 cls=67.9)
+step 300  loss=10.3981  lr=2.69e-04  88.2ms/step  x[-1.31,1.50] dy[-1.703e+01,1.862e+01]
+  grad_norm=0.4761  attn=0.2729 ffn=0.0924 embed=0.3789
+    L0: |g|=0.1497    L3: |g|=0.0886    L5: |g|=0.0788
+    L0 sdpa_bwd: |dq|=0.013321 |dk|=0.015686 |dv|=0.194702
+  hardware: ANE=12.4ms  CPU=63.4ms  IO=2.2ms  (ane_f=4.0 ane_b=8.5 rms=1.1 silu=1.5 cls=60.4)
+step 310  loss=10.3858  lr=2.66e-04  80.2ms/step  x[-1.40,1.43] dy[-1.136e+01,1.024e+01]
+  grad_norm=0.5726  attn=0.3515 ffn=0.1279 embed=0.4334
+    L0: |g|=0.2127    L3: |g|=0.1024    L5: |g|=0.0899
+    L0 sdpa_bwd: |dq|=0.010512 |dk|=0.012085 |dv|=0.235229
+  hardware: ANE=13.8ms  CPU=65.6ms  IO=2.3ms  (ane_f=4.7 ane_b=9.1 rms=1.2 silu=1.6 cls=62.4)
+step 320  loss=10.4061  lr=2.62e-04  84.0ms/step  x[-1.80,1.42] dy[-1.130e+01,1.697e+01]
+  grad_norm=0.7585  attn=0.4403 ffn=0.1965 embed=0.5854
+    L0: |g|=0.3175    L3: |g|=0.1016    L5: |g|=0.0838
+    L0 sdpa_bwd: |dq|=0.025063 |dk|=0.026289 |dv|=0.610840
+  hardware: ANE=13.4ms  CPU=63.3ms  IO=2.2ms  (ane_f=5.5 ane_b=7.9 rms=1.1 silu=1.5 cls=60.3)
+step 330  loss=10.3799  lr=2.59e-04  81.0ms/step  x[-1.46,1.47] dy[-3.299e+01,2.261e+01]
+  grad_norm=0.6133  attn=0.3494 ffn=0.1251 embed=0.4881
+    L0: |g|=0.2231    L3: |g|=0.0960    L5: |g|=0.0838
+    L0 sdpa_bwd: |dq|=0.032293 |dk|=0.031196 |dv|=0.288086
+  hardware: ANE=12.7ms  CPU=69.5ms  IO=2.2ms  (ane_f=4.4 ane_b=8.4 rms=1.1 silu=1.4 cls=66.5)
+step 340  loss=10.3950  lr=2.56e-04  86.6ms/step  x[-1.62,1.96] dy[-1.586e+01,1.486e+01]
+  grad_norm=0.4814  attn=0.2679 ffn=0.0890 embed=0.3899
+    L0: |g|=0.1478    L3: |g|=0.0850    L5: |g|=0.0773
+    L0 sdpa_bwd: |dq|=0.020565 |dk|=0.024705 |dv|=0.227417
+  hardware: ANE=12.6ms  CPU=78.1ms  IO=2.2ms  (ane_f=4.3 ane_b=8.2 rms=1.1 silu=1.5 cls=75.0)
+step 350  loss=10.4202  lr=2.52e-04  95.3ms/step  x[-1.85,1.60] dy[-1.227e+01,1.065e+01]
+  grad_norm=0.4328  attn=0.2337 ffn=0.0743 embed=0.3566
+    L0: |g|=0.1170    L3: |g|=0.0772    L5: |g|=0.0718
+    L0 sdpa_bwd: |dq|=0.017472 |dk|=0.017166 |dv|=0.344727
+  hardware: ANE=12.7ms  CPU=77.3ms  IO=2.1ms  (ane_f=4.2 ane_b=8.5 rms=1.1 silu=1.5 cls=74.1)
+step 360  loss=10.3963  lr=2.48e-04  94.3ms/step  x[-1.45,1.88] dy[-2.213e+01,2.069e+01]
+  grad_norm=0.5019  attn=0.2802 ffn=0.0941 embed=0.4055
+    L0: |g|=0.1619    L3: |g|=0.0837    L5: |g|=0.0761
+    L0 sdpa_bwd: |dq|=0.014118 |dk|=0.025604 |dv|=0.286621
+  hardware: ANE=14.5ms  CPU=84.8ms  IO=2.4ms  (ane_f=4.9 ane_b=9.6 rms=1.5 silu=1.6 cls=81.2)
+step 370  loss=10.4000  lr=2.45e-04  104.1ms/step  x[-1.71,1.74] dy[-1.847e+01,1.519e+01]
+  grad_norm=0.5456  attn=0.3049 ffn=0.1041 embed=0.4402
+    L0: |g|=0.1844    L3: |g|=0.0869    L5: |g|=0.0750
+    L0 sdpa_bwd: |dq|=0.015089 |dk|=0.015047 |dv|=0.191528
+  hardware: ANE=15.1ms  CPU=82.5ms  IO=2.3ms  (ane_f=5.5 ane_b=9.6 rms=1.2 silu=1.7 cls=79.2)
+step 380  loss=10.3952  lr=2.41e-04  102.3ms/step  x[-1.46,1.78] dy[-1.289e+01,1.314e+01]
+  grad_norm=0.4550  attn=0.2437 ffn=0.0836 embed=0.3749
+    L0: |g|=0.1338    L3: |g|=0.0789    L5: |g|=0.0703
+    L0 sdpa_bwd: |dq|=0.038366 |dk|=0.048065 |dv|=0.545410
+  hardware: ANE=14.9ms  CPU=83.4ms  IO=2.8ms  (ane_f=4.9 ane_b=10.0 rms=1.3 silu=1.6 cls=79.9)
+step 390  loss=10.3943  lr=2.37e-04  103.6ms/step  x[-1.47,1.93] dy[-2.747e+01,2.904e+01]
+  grad_norm=0.4498  attn=0.2356 ffn=0.0761 embed=0.3755
+    L0: |g|=0.1278    L3: |g|=0.0770    L5: |g|=0.0692
+  [ckpt saved, best_loss=10.3755]
+    L0 sdpa_bwd: |dq|=0.033238 |dk|=0.040161 |dv|=0.320801
+  hardware: ANE=12.2ms  CPU=75.9ms  IO=2.3ms  (ane_f=4.1 ane_b=8.1 rms=1.1 silu=1.5 cls=72.8)
+step 400  loss=10.3997  lr=2.33e-04  92.8ms/step  x[-1.31,1.69] dy[-1.565e+01,1.598e+01]
+  grad_norm=0.4371  attn=0.2213 ffn=0.0697 embed=0.3704
+    L0: |g|=0.1195    L3: |g|=0.0722    L5: |g|=0.0641
+    L0 sdpa_bwd: |dq|=0.014756 |dk|=0.015070 |dv|=0.257324
+  hardware: ANE=13.1ms  CPU=67.4ms  IO=2.2ms  (ane_f=4.5 ane_b=8.5 rms=1.1 silu=1.5 cls=64.3)
+step 410  loss=10.3973  lr=2.29e-04  85.0ms/step  x[-1.43,1.86] dy[-1.242e+01,1.252e+01]
+  grad_norm=0.4914  attn=0.2620 ffn=0.0916 embed=0.4055
+    L0: |g|=0.1580    L3: |g|=0.0737    L5: |g|=0.0666
+    L0 sdpa_bwd: |dq|=0.007478 |dk|=0.011738 |dv|=0.196777
+  hardware: ANE=11.9ms  CPU=64.9ms  IO=2.2ms  (ane_f=3.9 ane_b=8.1 rms=1.1 silu=1.5 cls=61.8)
+step 420  loss=10.4102  lr=2.25e-04  81.2ms/step  x[-1.45,2.09] dy[-1.048e+01,9.397e+00]
+  grad_norm=0.5736  attn=0.3266 ffn=0.1137 embed=0.4575
+    L0: |g|=0.1943    L3: |g|=0.0880    L5: |g|=0.0798
+    L0 sdpa_bwd: |dq|=0.019079 |dk|=0.023770 |dv|=0.385254
+  hardware: ANE=12.1ms  CPU=86.3ms  IO=2.4ms  (ane_f=3.8 ane_b=8.3 rms=1.2 silu=1.6 cls=82.9)
+step 430  loss=10.4165  lr=2.20e-04  103.4ms/step  x[-1.68,2.17] dy[-1.699e+01,1.651e+01]
+  grad_norm=0.6006  attn=0.3104 ffn=0.1090 embed=0.5024
+    L0: |g|=0.1997    L3: |g|=0.0825    L5: |g|=0.0699
+    L0 sdpa_bwd: |dq|=0.015395 |dk|=0.013229 |dv|=0.222900
+  hardware: ANE=13.1ms  CPU=63.8ms  IO=2.2ms  (ane_f=4.6 ane_b=8.5 rms=1.1 silu=1.5 cls=60.8)
+step 440  loss=10.4068  lr=2.16e-04  81.2ms/step  x[-1.50,1.68] dy[-1.539e+01,1.810e+01]
+  grad_norm=0.4351  attn=0.2177 ffn=0.0714 embed=0.3698
+    L0: |g|=0.1178    L3: |g|=0.0728    L5: |g|=0.0638
+    L0 sdpa_bwd: |dq|=0.052550 |dk|=0.044708 |dv|=0.500000
+  hardware: ANE=11.5ms  CPU=74.0ms  IO=2.2ms  (ane_f=3.9 ane_b=7.6 rms=1.1 silu=1.5 cls=70.9)
+step 450  loss=10.3947  lr=2.12e-04  89.9ms/step  x[-1.57,1.81] dy[-2.590e+01,2.640e+01]
+  grad_norm=0.5964  attn=0.3524 ffn=0.1232 embed=0.4651
+    L0: |g|=0.2201    L3: |g|=0.0985    L5: |g|=0.0810
+    L0 sdpa_bwd: |dq|=0.026919 |dk|=0.040802 |dv|=0.355225
+  hardware: ANE=15.7ms  CPU=79.7ms  IO=2.2ms  (ane_f=5.7 ane_b=10.1 rms=1.1 silu=1.5 cls=76.6)
+step 460  loss=10.3986  lr=2.07e-04  100.1ms/step  x[-1.91,2.35] dy[-1.851e+01,1.645e+01]
+  grad_norm=0.5305  attn=0.2856 ffn=0.0987 embed=0.4359
+    L0: |g|=0.1778    L3: |g|=0.0791    L5: |g|=0.0698
+    L0 sdpa_bwd: |dq|=0.027705 |dk|=0.024063 |dv|=0.270752
+  hardware: ANE=11.8ms  CPU=81.4ms  IO=2.3ms  (ane_f=4.2 ane_b=7.6 rms=1.1 silu=1.6 cls=78.1)
+step 470  loss=10.4033  lr=2.03e-04  97.9ms/step  x[-1.66,2.17] dy[-1.393e+01,1.356e+01]
+  grad_norm=0.4097  attn=0.1940 ffn=0.0629 embed=0.3553
+    L0: |g|=0.1035    L3: |g|=0.0632    L5: |g|=0.0598
+    L0 sdpa_bwd: |dq|=0.047101 |dk|=0.051829 |dv|=0.453857
+  hardware: ANE=16.1ms  CPU=74.3ms  IO=2.2ms  (ane_f=5.9 ane_b=10.2 rms=1.1 silu=1.5 cls=71.2)
+step 480  loss=10.3191  lr=1.98e-04  94.8ms/step  x[-1.73,1.97] dy[-2.712e+01,2.255e+01]
+  grad_norm=0.5080  attn=0.2718 ffn=0.0862 embed=0.4203
+    L0: |g|=0.1670    L3: |g|=0.0772    L5: |g|=0.0655
+    L0 sdpa_bwd: |dq|=0.011169 |dk|=0.012557 |dv|=0.211182
+  hardware: ANE=15.7ms  CPU=76.4ms  IO=2.2ms  (ane_f=5.9 ane_b=9.8 rms=1.1 silu=1.5 cls=73.4)
+step 490  loss=10.4243  lr=1.94e-04  96.5ms/step  x[-2.02,2.16] dy[-8.157e+00,1.217e+01]
+  grad_norm=0.5793  attn=0.3234 ffn=0.1122 embed=0.4673
+    L0: |g|=0.2044    L3: |g|=0.0888    L5: |g|=0.0757
+    L0 sdpa_bwd: |dq|=0.020147 |dk|=0.018634 |dv|=0.242310
+  hardware: ANE=15.1ms  CPU=68.6ms  IO=2.3ms  (ane_f=5.8 ane_b=9.3 rms=1.1 silu=1.6 cls=65.4)
+step 500  loss=10.3950  lr=1.89e-04  88.5ms/step  x[-2.18,2.36] dy[-1.465e+01,1.277e+01]
+  grad_norm=0.4653  attn=0.2378 ffn=0.0777 embed=0.3923
+    L0: |g|=0.1341    L3: |g|=0.0725    L5: |g|=0.0646
+    L0 sdpa_bwd: |dq|=0.048241 |dk|=0.062057 |dv|=0.894043
+  hardware: ANE=14.7ms  CPU=79.2ms  IO=2.3ms  (ane_f=4.4 ane_b=10.3 rms=1.1 silu=1.6 cls=75.9)
+step 510  loss=10.3453  lr=1.84e-04  98.7ms/step  x[-1.82,1.87] dy[-7.472e+01,5.324e+01]
+  grad_norm=0.4593  attn=0.2252 ffn=0.0719 embed=0.3937
+    L0: |g|=0.1304    L3: |g|=0.0686    L5: |g|=0.0620
+    L0 sdpa_bwd: |dq|=0.013041 |dk|=0.013657 |dv|=0.279297
+  hardware: ANE=12.0ms  CPU=65.1ms  IO=2.1ms  (ane_f=4.2 ane_b=7.8 rms=1.1 silu=1.5 cls=62.0)
+step 520  loss=10.4079  lr=1.80e-04  81.4ms/step  x[-1.81,2.21] dy[-1.163e+01,1.330e+01]
+  grad_norm=0.4085  attn=0.2027 ffn=0.0626 embed=0.3490
+    L0: |g|=0.1009    L3: |g|=0.0713    L5: |g|=0.0642
+    L0 sdpa_bwd: |dq|=0.045028 |dk|=0.047699 |dv|=0.301025
+  hardware: ANE=12.6ms  CPU=66.4ms  IO=2.2ms  (ane_f=4.5 ane_b=8.1 rms=1.1 silu=1.5 cls=63.4)
+step 530  loss=10.3558  lr=1.75e-04  83.3ms/step  x[-1.54,1.79] dy[-1.304e+01,1.946e+01]
+  grad_norm=0.4264  attn=0.2128 ffn=0.0694 embed=0.3628
+    L0: |g|=0.1096    L3: |g|=0.0710    L5: |g|=0.0651
+    L0 sdpa_bwd: |dq|=0.014586 |dk|=0.015717 |dv|=0.236450
+  hardware: ANE=12.5ms  CPU=64.3ms  IO=2.2ms  (ane_f=4.3 ane_b=8.2 rms=1.1 silu=1.5 cls=61.3)
+step 540  loss=10.3846  lr=1.70e-04  81.1ms/step  x[-1.91,2.38] dy[-9.914e+00,1.335e+01]
+  grad_norm=0.4533  attn=0.2206 ffn=0.0798 embed=0.3879
+    L0: |g|=0.1351    L3: |g|=0.0665    L5: |g|=0.0618
+    L0 sdpa_bwd: |dq|=0.009294 |dk|=0.015930 |dv|=0.185547
+  hardware: ANE=12.4ms  CPU=67.6ms  IO=2.2ms  (ane_f=4.4 ane_b=8.0 rms=1.1 silu=1.5 cls=64.5)
+step 550  loss=10.3985  lr=1.65e-04  84.5ms/step  x[-1.85,1.94] dy[-8.775e+00,1.014e+01]
+  grad_norm=0.5061  attn=0.2755 ffn=0.0951 embed=0.4136
+    L0: |g|=0.1650    L3: |g|=0.0819    L5: |g|=0.0679
+    L0 sdpa_bwd: |dq|=0.008284 |dk|=0.013616 |dv|=0.174805
+  hardware: ANE=14.1ms  CPU=83.7ms  IO=2.4ms  (ane_f=5.0 ane_b=9.2 rms=1.2 silu=1.6 cls=80.4)
+step 560  loss=10.3959  lr=1.61e-04  102.8ms/step  x[-1.66,2.01] dy[-1.110e+01,1.232e+01]
+  grad_norm=0.4045  attn=0.1901 ffn=0.0621 embed=0.3515
+    L0: |g|=0.0969    L3: |g|=0.0651    L5: |g|=0.0602
+    L0 sdpa_bwd: |dq|=0.017933 |dk|=0.015350 |dv|=0.213867
+  hardware: ANE=14.6ms  CPU=79.6ms  IO=2.3ms  (ane_f=5.7 ane_b=8.9 rms=1.1 silu=1.6 cls=76.3)
+step 570  loss=10.3856  lr=1.56e-04  98.9ms/step  x[-1.67,1.76] dy[-1.138e+01,1.284e+01]
+  grad_norm=0.5245  attn=0.2717 ffn=0.0907 embed=0.4393
+    L0: |g|=0.1708    L3: |g|=0.0748    L5: |g|=0.0637
+    L0 sdpa_bwd: |dq|=0.031090 |dk|=0.038574 |dv|=0.407959
+  hardware: ANE=15.2ms  CPU=80.2ms  IO=2.5ms  (ane_f=5.8 ane_b=9.5 rms=1.1 silu=1.5 cls=76.9)
+step 580  loss=10.3801  lr=1.51e-04  100.4ms/step  x[-1.76,1.61] dy[-2.452e+01,2.172e+01]
+  grad_norm=0.7222  attn=0.4138 ffn=0.1526 embed=0.5718
+    L0: |g|=0.2813    L3: |g|=0.1040    L5: |g|=0.0840
+    L0 sdpa_bwd: |dq|=0.022166 |dk|=0.020362 |dv|=0.405762
+  hardware: ANE=13.6ms  CPU=77.0ms  IO=2.2ms  (ane_f=5.8 ane_b=7.8 rms=1.1 silu=1.5 cls=73.9)
+step 590  loss=10.4181  lr=1.47e-04  95.1ms/step  x[-1.57,2.54] dy[-1.836e+01,1.994e+01]
+  grad_norm=0.4415  attn=0.2228 ffn=0.0715 embed=0.3743
+    L0: |g|=0.1235    L3: |g|=0.0715    L5: |g|=0.0633
+    L0 sdpa_bwd: |dq|=0.038646 |dk|=0.032104 |dv|=0.380127
+  hardware: ANE=14.5ms  CPU=74.9ms  IO=2.5ms  (ane_f=5.3 ane_b=9.2 rms=1.2 silu=1.6 cls=71.5)
+step 600  loss=10.3885  lr=1.42e-04  94.4ms/step  x[-1.70,2.02] dy[-2.329e+01,2.184e+01]
+  grad_norm=0.4493  attn=0.2120 ffn=0.0707 embed=0.3897
+    L0: |g|=0.1244    L3: |g|=0.0663    L5: |g|=0.0578
+    L0 sdpa_bwd: |dq|=0.128393 |dk|=0.142944 |dv|=1.745117
+  hardware: ANE=12.6ms  CPU=75.8ms  IO=2.2ms  (ane_f=4.4 ane_b=8.3 rms=1.1 silu=1.5 cls=72.7)
+step 610  loss=10.3352  lr=1.37e-04  92.9ms/step  x[-1.65,2.04] dy[-6.491e+01,1.012e+02]
+  grad_norm=0.7156  attn=0.4019 ffn=0.1406 embed=0.5751
+    L0: |g|=0.2598    L3: |g|=0.1091    L5: |g|=0.0862
+    L0 sdpa_bwd: |dq|=0.010544 |dk|=0.012958 |dv|=0.252686
+  hardware: ANE=12.4ms  CPU=79.4ms  IO=2.2ms  (ane_f=4.1 ane_b=8.3 rms=1.2 silu=1.5 cls=76.2)
+step 620  loss=10.3840  lr=1.33e-04  96.6ms/step  x[-1.82,1.74] dy[-1.310e+01,1.206e+01]
+  grad_norm=0.4294  attn=0.2128 ffn=0.0729 embed=0.3657
+    L0: |g|=0.1174    L3: |g|=0.0691    L5: |g|=0.0619
+    L0 sdpa_bwd: |dq|=0.010533 |dk|=0.012665 |dv|=0.254639
+  hardware: ANE=12.7ms  CPU=75.2ms  IO=2.2ms  (ane_f=4.3 ane_b=8.4 rms=1.1 silu=1.5 cls=72.1)
+step 630  loss=10.4153  lr=1.28e-04  92.3ms/step  x[-1.60,1.65] dy[-1.707e+01,1.476e+01]
+  grad_norm=0.5832  attn=0.2905 ffn=0.1087 embed=0.4938
+    L0: |g|=0.1939    L3: |g|=0.0736    L5: |g|=0.0639
+    L0 sdpa_bwd: |dq|=0.011198 |dk|=0.014557 |dv|=0.178711
+  hardware: ANE=12.2ms  CPU=68.3ms  IO=2.2ms  (ane_f=4.0 ane_b=8.2 rms=1.1 silu=1.5 cls=65.3)
+step 640  loss=10.4226  lr=1.24e-04  84.8ms/step  x[-1.83,2.13] dy[-1.044e+01,8.485e+00]
+  grad_norm=0.4229  attn=0.2089 ffn=0.0681 embed=0.3613
+    L0: |g|=0.1089    L3: |g|=0.0713    L5: |g|=0.0613
+    L0 sdpa_bwd: |dq|=0.016543 |dk|=0.014900 |dv|=0.299805
+  hardware: ANE=14.5ms  CPU=71.0ms  IO=2.3ms  (ane_f=5.3 ane_b=9.2 rms=1.1 silu=1.7 cls=67.6)
+step 650  loss=10.3879  lr=1.19e-04  90.1ms/step  x[-1.67,2.32] dy[-1.376e+01,1.407e+01]
+  grad_norm=0.4153  attn=0.2011 ffn=0.0686 embed=0.3567
+    L0: |g|=0.1051    L3: |g|=0.0685    L5: |g|=0.0591
+    L0 sdpa_bwd: |dq|=0.066691 |dk|=0.069660 |dv|=0.842773
+  hardware: ANE=12.0ms  CPU=72.2ms  IO=2.2ms  (ane_f=4.3 ane_b=7.6 rms=1.1 silu=1.5 cls=69.1)
+step 660  loss=10.3210  lr=1.15e-04  88.6ms/step  x[-1.77,1.74] dy[-4.481e+01,3.935e+01]
+  grad_norm=0.5090  attn=0.2838 ffn=0.0975 embed=0.4111
+    L0: |g|=0.1663    L3: |g|=0.0877    L5: |g|=0.0750
+    L0 sdpa_bwd: |dq|=0.019182 |dk|=0.026958 |dv|=0.324463
+  hardware: ANE=15.0ms  CPU=72.9ms  IO=2.2ms  (ane_f=5.1 ane_b=9.9 rms=1.1 silu=1.5 cls=69.7)
+step 670  loss=10.2938  lr=1.11e-04  92.4ms/step  x[-1.93,1.97] dy[-1.886e+01,2.020e+01]
+  grad_norm=0.5091  attn=0.2630 ffn=0.0950 embed=0.4254
+    L0: |g|=0.1652    L3: |g|=0.0748    L5: |g|=0.0640
+    L0 sdpa_bwd: |dq|=0.145653 |dk|=0.182234 |dv|=1.047852
+  hardware: ANE=12.4ms  CPU=78.0ms  IO=2.3ms  (ane_f=4.0 ane_b=8.4 rms=1.2 silu=1.6 cls=74.7)
+step 680  loss=10.3148  lr=1.06e-04  95.0ms/step  x[-1.68,1.50] dy[-4.752e+01,5.901e+01]
+  grad_norm=0.5358  attn=0.2895 ffn=0.0975 embed=0.4402
+    L0: |g|=0.1815    L3: |g|=0.0815    L5: |g|=0.0689
+    L0 sdpa_bwd: |dq|=0.058371 |dk|=0.094116 |dv|=0.641113
+  hardware: ANE=14.2ms  CPU=84.2ms  IO=2.4ms  (ane_f=4.5 ane_b=9.7 rms=1.2 silu=1.5 cls=81.0)
+step 690  loss=10.3893  lr=1.02e-04  103.6ms/step  x[-1.53,1.75] dy[-3.689e+01,3.691e+01]
+  grad_norm=0.4485  attn=0.2280 ffn=0.0771 embed=0.3783
+    L0: |g|=0.1281    L3: |g|=0.0698    L5: |g|=0.0639
+    L0 sdpa_bwd: |dq|=0.011669 |dk|=0.014619 |dv|=0.227783
+  hardware: ANE=12.5ms  CPU=84.6ms  IO=2.5ms  (ane_f=4.6 ane_b=7.9 rms=1.2 silu=1.6 cls=81.2)
+step 700  loss=10.4162  lr=9.79e-05  102.0ms/step  x[-1.50,2.10] dy[-1.595e+01,1.104e+01]
+  grad_norm=0.4774  attn=0.2428 ffn=0.0899 embed=0.4011
+    L0: |g|=0.1511    L3: |g|=0.0689    L5: |g|=0.0638
+    L0 sdpa_bwd: |dq|=0.017204 |dk|=0.018626 |dv|=0.296143
+  hardware: ANE=12.1ms  CPU=87.9ms  IO=2.4ms  (ane_f=4.3 ane_b=7.8 rms=1.2 silu=1.7 cls=84.5)
+step 710  loss=10.3797  lr=9.39e-05  105.1ms/step  x[-1.67,1.88] dy[-1.875e+01,1.270e+01]
+  grad_norm=0.4191  attn=0.2139 ffn=0.0710 embed=0.3533
+    L0: |g|=0.1148    L3: |g|=0.0703    L5: |g|=0.0642
+    L0 sdpa_bwd: |dq|=0.035206 |dk|=0.041231 |dv|=0.566406
+  hardware: ANE=12.0ms  CPU=63.1ms  IO=2.2ms  (ane_f=4.0 ane_b=8.0 rms=1.1 silu=1.5 cls=60.0)
+step 720  loss=10.3886  lr=8.99e-05  79.4ms/step  x[-1.42,1.74] dy[-3.134e+01,2.493e+01]
+  grad_norm=0.4667  attn=0.2490 ffn=0.0880 embed=0.3847
+    L0: |g|=0.1427    L3: |g|=0.0764    L5: |g|=0.0675
+    L0 sdpa_bwd: |dq|=0.017309 |dk|=0.020187 |dv|=0.281982
+  hardware: ANE=13.5ms  CPU=64.3ms  IO=2.2ms  (ane_f=5.3 ane_b=8.2 rms=1.1 silu=1.5 cls=61.2)
+step 730  loss=10.3792  lr=8.60e-05  82.1ms/step  x[-1.49,1.46] dy[-1.469e+01,1.296e+01]
+  grad_norm=0.5335  attn=0.3024 ffn=0.1100 embed=0.4255
+    L0: |g|=0.1876    L3: |g|=0.0869    L5: |g|=0.0796
+    L0 sdpa_bwd: |dq|=0.017609 |dk|=0.016036 |dv|=0.205566
+  hardware: ANE=13.0ms  CPU=95.2ms  IO=2.9ms  (ane_f=5.0 ane_b=8.0 rms=1.4 silu=1.6 cls=91.5)
+step 740  loss=10.3975  lr=8.23e-05  113.5ms/step  x[-1.85,1.62] dy[-1.168e+01,1.152e+01]
+  grad_norm=0.4471  attn=0.2232 ffn=0.0781 embed=0.3794
+    L0: |g|=0.1279    L3: |g|=0.0711    L5: |g|=0.0638
+    L0 sdpa_bwd: |dq|=0.031483 |dk|=0.035431 |dv|=0.357178
+  hardware: ANE=11.6ms  CPU=87.7ms  IO=2.5ms  (ane_f=3.9 ane_b=7.7 rms=1.2 silu=1.6 cls=84.4)
+step 750  loss=10.2842  lr=7.86e-05  104.2ms/step  x[-2.06,2.03] dy[-1.979e+01,2.223e+01]
+  grad_norm=0.5252  attn=0.2766 ffn=0.0980 embed=0.4355
+    L0: |g|=0.1726    L3: |g|=0.0783    L5: |g|=0.0684
+    L0 sdpa_bwd: |dq|=0.008684 |dk|=0.016088 |dv|=0.224365
+  hardware: ANE=14.3ms  CPU=86.7ms  IO=2.5ms  (ane_f=5.0 ane_b=9.3 rms=1.2 silu=1.7 cls=83.3)
+step 760  loss=10.3851  lr=7.50e-05  105.8ms/step  x[-1.68,1.67] dy[-1.799e+01,1.461e+01]
+  grad_norm=0.4296  attn=0.2158 ffn=0.0755 embed=0.3637
+    L0: |g|=0.1156    L3: |g|=0.0704    L5: |g|=0.0658
+    L0 sdpa_bwd: |dq|=0.015369 |dk|=0.023071 |dv|=0.229614
+  hardware: ANE=11.9ms  CPU=70.6ms  IO=2.3ms  (ane_f=4.1 ane_b=7.8 rms=1.1 silu=1.6 cls=67.4)
+step 770  loss=10.3810  lr=7.16e-05  87.1ms/step  x[-1.71,1.63] dy[-1.083e+01,1.275e+01]
+  grad_norm=0.6289  attn=0.3489 ffn=0.1210 embed=0.5089
+    L0: |g|=0.2295    L3: |g|=0.0899    L5: |g|=0.0769
+    L0 sdpa_bwd: |dq|=0.013503 |dk|=0.020219 |dv|=0.280762
+  hardware: ANE=12.9ms  CPU=81.1ms  IO=2.4ms  (ane_f=4.4 ane_b=8.5 rms=1.1 silu=1.6 cls=77.9)
+step 780  loss=10.4169  lr=6.82e-05  98.7ms/step  x[-1.36,1.71] dy[-1.262e+01,1.396e+01]
+  grad_norm=0.4953  attn=0.2420 ffn=0.0837 embed=0.4239
+    L0: |g|=0.1512    L3: |g|=0.0672    L5: |g|=0.0618
+    L0 sdpa_bwd: |dq|=0.024920 |dk|=0.028883 |dv|=0.284180
+  hardware: ANE=11.8ms  CPU=80.4ms  IO=2.3ms  (ane_f=4.0 ane_b=7.8 rms=1.1 silu=1.6 cls=77.1)
+step 790  loss=10.3775  lr=6.50e-05  96.8ms/step  x[-1.74,1.94] dy[-2.185e+01,1.400e+01]
+  grad_norm=0.5448  attn=0.3120 ffn=0.1132 embed=0.4320
+    L0: |g|=0.1961    L3: |g|=0.0850    L5: |g|=0.0729
+  [ckpt saved, best_loss=10.2751]
+    L0 sdpa_bwd: |dq|=0.013168 |dk|=0.014296 |dv|=0.247803
+  hardware: ANE=12.3ms  CPU=84.0ms  IO=2.3ms  (ane_f=4.1 ane_b=8.2 rms=1.1 silu=1.6 cls=80.8)
+step 800  loss=10.4017  lr=6.19e-05  101.0ms/step  x[-1.64,1.89] dy[-1.124e+01,1.312e+01]
+  grad_norm=0.4881  attn=0.2619 ffn=0.0964 embed=0.4004
+    L0: |g|=0.1545    L3: |g|=0.0807    L5: |g|=0.0719
+    L0 sdpa_bwd: |dq|=0.016016 |dk|=0.018995 |dv|=0.266602
+  hardware: ANE=13.2ms  CPU=81.0ms  IO=2.2ms  (ane_f=4.8 ane_b=8.4 rms=1.2 silu=1.6 cls=77.8)
+step 810  loss=10.4270  lr=5.89e-05  99.0ms/step  x[-1.75,1.70] dy[-1.353e+01,1.484e+01]
+  grad_norm=0.6515  attn=0.3558 ffn=0.1249 embed=0.5312
+    L0: |g|=0.2463    L3: |g|=0.0847    L5: |g|=0.0749
+    L0 sdpa_bwd: |dq|=0.018410 |dk|=0.023022 |dv|=0.498779
+  hardware: ANE=12.7ms  CPU=62.2ms  IO=2.1ms  (ane_f=4.2 ane_b=8.5 rms=1.1 silu=1.5 cls=59.1)
+step 820  loss=10.3378  lr=5.61e-05  79.2ms/step  x[-1.45,1.30] dy[-2.779e+01,2.708e+01]
+  grad_norm=0.4727  attn=0.2605 ffn=0.0928 embed=0.3833
+    L0: |g|=0.1519    L3: |g|=0.0816    L5: |g|=0.0723
+    L0 sdpa_bwd: |dq|=0.072915 |dk|=0.072449 |dv|=0.810059
+  hardware: ANE=12.5ms  CPU=65.7ms  IO=2.2ms  (ane_f=4.2 ane_b=8.3 rms=1.1 silu=1.5 cls=62.6)
+step 830  loss=10.2861  lr=5.33e-05  82.6ms/step  x[-1.47,2.01] dy[-4.407e+01,5.547e+01]
+  grad_norm=0.5391  attn=0.2929 ffn=0.0992 embed=0.4415
+    L0: |g|=0.1827    L3: |g|=0.0818    L5: |g|=0.0746
+    L0 sdpa_bwd: |dq|=0.040494 |dk|=0.045197 |dv|=0.519531
+  hardware: ANE=12.4ms  CPU=69.2ms  IO=2.2ms  (ane_f=4.1 ane_b=8.3 rms=1.1 silu=1.5 cls=66.1)
+step 840  loss=10.3491  lr=5.08e-05  86.1ms/step  x[-1.69,1.88] dy[-3.304e+01,2.420e+01]
+  grad_norm=0.5278  attn=0.2875 ffn=0.1032 embed=0.4304
+    L0: |g|=0.1802    L3: |g|=0.0826    L5: |g|=0.0758
+    L0 sdpa_bwd: |dq|=0.047362 |dk|=0.044545 |dv|=0.661621
+  hardware: ANE=11.7ms  CPU=67.3ms  IO=2.1ms  (ane_f=4.2 ane_b=7.5 rms=1.1 silu=1.5 cls=64.2)
+step 850  loss=10.3193  lr=4.83e-05  83.2ms/step  x[-1.51,1.92] dy[-3.143e+01,3.619e+01]
+  grad_norm=0.5134  attn=0.2727 ffn=0.0993 embed=0.4234
+    L0: |g|=0.1687    L3: |g|=0.0791    L5: |g|=0.0704
+    L0 sdpa_bwd: |dq|=0.032595 |dk|=0.052032 |dv|=0.352051
+  hardware: ANE=11.6ms  CPU=67.2ms  IO=2.2ms  (ane_f=4.0 ane_b=7.6 rms=1.1 silu=1.6 cls=64.0)
+step 860  loss=10.4183  lr=4.60e-05  83.1ms/step  x[-1.80,1.85] dy[-2.153e+01,2.262e+01]
+  grad_norm=0.6546  attn=0.3717 ffn=0.1368 embed=0.5211
+    L0: |g|=0.2482    L3: |g|=0.0920    L5: |g|=0.0775
+    L0 sdpa_bwd: |dq|=0.010687 |dk|=0.011399 |dv|=0.158447
+  hardware: ANE=12.3ms  CPU=77.1ms  IO=2.3ms  (ane_f=4.0 ane_b=8.3 rms=1.1 silu=1.5 cls=73.9)
+step 870  loss=10.3694  lr=4.39e-05  93.9ms/step  x[-1.73,1.84] dy[-9.866e+00,1.128e+01]
+  grad_norm=0.5275  attn=0.2787 ffn=0.0961 embed=0.4374
+    L0: |g|=0.1713    L3: |g|=0.0795    L5: |g|=0.0714
+    L0 sdpa_bwd: |dq|=0.041422 |dk|=0.048828 |dv|=0.513184
+  hardware: ANE=12.7ms  CPU=82.0ms  IO=2.3ms  (ane_f=4.0 ane_b=8.7 rms=1.1 silu=1.6 cls=78.6)
+step 880  loss=10.3181  lr=4.19e-05  99.2ms/step  x[-1.82,2.03] dy[-2.653e+01,2.471e+01]
+  grad_norm=0.6449  attn=0.3594 ffn=0.1345 embed=0.5183
+    L0: |g|=0.2254    L3: |g|=0.0959    L5: |g|=0.0827
+    L0 sdpa_bwd: |dq|=0.036286 |dk|=0.030363 |dv|=0.346680
+  hardware: ANE=12.3ms  CPU=80.4ms  IO=2.2ms  (ane_f=4.8 ane_b=7.5 rms=1.1 silu=1.5 cls=77.3)
+step 890  loss=10.3794  lr=4.00e-05  97.2ms/step  x[-2.41,1.90] dy[-1.850e+01,1.402e+01]
+  grad_norm=0.4874  attn=0.2645 ffn=0.0942 embed=0.3984
+    L0: |g|=0.1540    L3: |g|=0.0795    L5: |g|=0.0749
+    L0 sdpa_bwd: |dq|=0.073857 |dk|=0.058480 |dv|=1.361328
+  hardware: ANE=12.4ms  CPU=81.0ms  IO=2.2ms  (ane_f=3.9 ane_b=8.5 rms=1.1 silu=1.6 cls=77.8)
+step 900  loss=10.3333  lr=3.83e-05  97.9ms/step  x[-1.75,1.75] dy[-6.709e+01,8.863e+01]
+  grad_norm=0.6460  attn=0.3508 ffn=0.1318 embed=0.5261
+    L0: |g|=0.2310    L3: |g|=0.0916    L5: |g|=0.0793
+    L0 sdpa_bwd: |dq|=0.022852 |dk|=0.020121 |dv|=0.477539
+  hardware: ANE=14.0ms  CPU=83.3ms  IO=2.5ms  (ane_f=5.3 ane_b=8.7 rms=1.2 silu=1.6 cls=79.9)
+step 910  loss=10.4024  lr=3.68e-05  102.3ms/step  x[-1.58,2.05] dy[-2.307e+01,1.871e+01]
+  grad_norm=0.4722  attn=0.2458 ffn=0.0887 embed=0.3932
+    L0: |g|=0.1467    L3: |g|=0.0732    L5: |g|=0.0679
+    L0 sdpa_bwd: |dq|=0.011762 |dk|=0.019625 |dv|=0.241699
+  hardware: ANE=11.6ms  CPU=74.5ms  IO=2.3ms  (ane_f=4.1 ane_b=7.5 rms=1.2 silu=1.6 cls=71.2)
+step 920  loss=10.3757  lr=3.54e-05  90.7ms/step  x[-1.69,1.64] dy[-1.187e+01,1.526e+01]
+  grad_norm=0.7029  attn=0.3813 ffn=0.1396 embed=0.5737
+    L0: |g|=0.2586    L3: |g|=0.0956    L5: |g|=0.0801
+    L0 sdpa_bwd: |dq|=0.010573 |dk|=0.011959 |dv|=0.267578
+  hardware: ANE=12.2ms  CPU=65.7ms  IO=2.2ms  (ane_f=4.0 ane_b=8.3 rms=1.1 silu=1.5 cls=62.7)
+step 930  loss=10.3622  lr=3.41e-05  82.3ms/step  x[-2.21,2.61] dy[-1.773e+01,1.531e+01]
+  grad_norm=0.4637  attn=0.2367 ffn=0.0888 embed=0.3887
+    L0: |g|=0.1434    L3: |g|=0.0690    L5: |g|=0.0623
+    L0 sdpa_bwd: |dq|=0.042504 |dk|=0.061077 |dv|=0.746582
+  hardware: ANE=11.9ms  CPU=74.6ms  IO=2.2ms  (ane_f=3.9 ane_b=7.9 rms=1.1 silu=1.5 cls=71.5)
+step 940  loss=10.2468  lr=3.30e-05  90.8ms/step  x[-2.30,1.99] dy[-4.040e+01,2.960e+01]
+  grad_norm=0.4924  attn=0.2656 ffn=0.0930 embed=0.4040
+    L0: |g|=0.1585    L3: |g|=0.0791    L5: |g|=0.0733
+    L0 sdpa_bwd: |dq|=0.020298 |dk|=0.023691 |dv|=0.367920
+  hardware: ANE=12.6ms  CPU=72.2ms  IO=2.2ms  (ane_f=4.8 ane_b=7.8 rms=1.2 silu=1.5 cls=69.1)
+step 950  loss=10.4172  lr=3.21e-05  89.2ms/step  x[-1.81,1.65] dy[-2.059e+01,1.743e+01]
+  grad_norm=0.6384  attn=0.3741 ffn=0.1412 embed=0.4976
+    L0: |g|=0.2378    L3: |g|=0.1010    L5: |g|=0.0887
+    L0 sdpa_bwd: |dq|=0.020390 |dk|=0.024201 |dv|=0.244263
+  hardware: ANE=11.5ms  CPU=66.5ms  IO=2.1ms  (ane_f=4.0 ane_b=7.6 rms=1.1 silu=1.5 cls=63.4)
+step 960  loss=10.4054  lr=3.14e-05  82.4ms/step  x[-1.67,1.69] dy[-1.063e+01,1.026e+01]
+  grad_norm=0.4532  attn=0.2327 ffn=0.0834 embed=0.3798
+    L0: |g|=0.1362    L3: |g|=0.0720    L5: |g|=0.0664
+    L0 sdpa_bwd: |dq|=0.018120 |dk|=0.037366 |dv|=0.266602
+  hardware: ANE=12.6ms  CPU=68.0ms  IO=2.2ms  (ane_f=4.0 ane_b=8.6 rms=1.1 silu=1.5 cls=64.9)
+step 970  loss=10.4072  lr=3.08e-05  85.1ms/step  x[-1.55,1.79] dy[-1.913e+01,2.241e+01]
+  grad_norm=0.5345  attn=0.2818 ffn=0.0977 embed=0.4435
+    L0: |g|=0.1778    L3: |g|=0.0776    L5: |g|=0.0707
+    L0 sdpa_bwd: |dq|=0.016143 |dk|=0.018219 |dv|=0.221924
+  hardware: ANE=12.7ms  CPU=79.5ms  IO=2.2ms  (ane_f=5.2 ane_b=7.5 rms=1.1 silu=1.5 cls=76.4)
+step 980  loss=10.3916  lr=3.04e-05  96.5ms/step  x[-1.65,1.92] dy[-9.873e+00,1.234e+01]
+  grad_norm=0.5759  attn=0.3322 ffn=0.1289 embed=0.4523
+    L0: |g|=0.2133    L3: |g|=0.0914    L5: |g|=0.0818
+    L0 sdpa_bwd: |dq|=0.027227 |dk|=0.027245 |dv|=0.322510
+  hardware: ANE=11.7ms  CPU=82.5ms  IO=2.4ms  (ane_f=4.0 ane_b=7.7 rms=1.2 silu=1.6 cls=79.3)
+step 990  loss=10.3929  lr=3.01e-05  99.0ms/step  x[-1.51,1.47] dy[-1.986e+01,1.636e+01]
+  grad_norm=0.5871  attn=0.3492 ffn=0.1331 embed=0.4527
+    L0: |g|=0.2218    L3: |g|=0.0985    L5: |g|=0.0853
+
+=== Efficiency Report ===
+Total steps:  1000
+Compile:      489ms (one-time, 0.5%)
+Train time:   92243ms (92.2ms/step)
+Wall time:    95.1s

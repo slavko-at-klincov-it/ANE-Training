@@ -1,0 +1,139 @@
+=== ANE Pipeline Training: Stories110M ===
+dim=768 hidden=2048 heads=12 seq=256 vocab=32000 layers=12
+Pipeline parallelism: double-buffered forward/backward overlap
+  Training from scratch (random init)
+Token data: 20658981 tokens (41.3 MB)
+Softmax kernel compiled (no weights)
+  Compiling layer 1/12... (13 compiles)  Compiling layer 2/12... (20 compiles)  Compiling layer 3/12... (27 compiles)  Compiling layer 4/12... (34 compiles)  Compiling layer 5/12... (41 compiles)  Compiling layer 6/12... (48 compiles)  Compiling layer 7/12... (55 compiles)  Compiling layer 8/12... (62 compiles)  Compiling layer 9/12... (69 compiles)  Compiling layer 10/12... (76 compiles)  Compiling layer 11/12... (83 compiles)  Compiling layer 12/12... (90 compiles)  Compiled 86 kernels in 4299ms                    
+step 0    loss=10.3994
+step 10   loss=10.4228
+step 20   loss=10.4309
+step 30   loss=10.3277
+step 40   loss=10.4086
+step 50   loss=10.4160
+step 60   loss=10.3821
+step 70   loss=10.4168
+step 80   loss=10.4301
+step 90   loss=10.3863
+  [batch 100: compile=4299ms train=7198.6ms (72.0ms/step) fwd=2160.8ms bwd=5037.7ms overlap=0.0ms compiles=99]
+  Compiling layer 1/12... (99 compiles)  Compiling layer 2/12... (106 compiles)  Compiling layer 3/12... (113 compiles)  Compiling layer 4/12... (120 compiles)  Compiling layer 5/12... (127 compiles)  Compiling layer 6/12... (134 compiles)  Compiling layer 7/12... (141 compiles)  Compiling layer 8/12... (148 compiles)  Compiling layer 9/12... (155 compiles)  Compiling layer 10/12... (162 compiles)  Compiling layer 11/12... (169 compiles)  Compiling layer 12/12... (176 compiles)  Compiled 86 kernels in 4595ms                    
+step 100  loss=9.7400
+step 110  loss=9.6575
+step 120  loss=9.7511
+step 130  loss=9.7997
+step 140  loss=9.7190
+step 150  loss=9.7579
+step 160  loss=9.7060
+step 170  loss=9.8098
+step 180  loss=9.6696
+step 190  loss=9.7572
+  [batch 100: compile=4595ms train=7208.6ms (72.1ms/step) fwd=2156.2ms bwd=5052.2ms overlap=0.0ms compiles=185]
+  Compiling layer 1/12... (185 compiles)  Compiling layer 2/12... (192 compiles)  Compiling layer 3/12... (199 compiles)  Compiling layer 4/12... (206 compiles)  Compiling layer 5/12... (213 compiles)  Compiling layer 6/12... (220 compiles)  Compiling layer 7/12... (227 compiles)  Compiling layer 8/12... (234 compiles)  Compiling layer 9/12... (241 compiles)  Compiling layer 10/12... (248 compiles)  Compiling layer 11/12... (255 compiles)  Compiling layer 12/12... (262 compiles)  Compiled 86 kernels in 4631ms                    
+step 200  loss=9.1667
+step 210  loss=9.2694
+step 220  loss=9.1568
+step 230  loss=9.1486
+step 240  loss=9.2401
+step 250  loss=9.2469
+step 260  loss=9.2744
+step 270  loss=9.2401
+step 280  loss=9.2926
+step 290  loss=9.3066
+  [batch 100: compile=4631ms train=7163.1ms (71.6ms/step) fwd=2146.3ms bwd=5016.6ms overlap=0.0ms compiles=271]
+  Compiling layer 1/12... (271 compiles)  Compiling layer 2/12... (278 compiles)  Compiling layer 3/12... (285 compiles)  Compiling layer 4/12... (292 compiles)  Compiling layer 5/12... (299 compiles)  Compiling layer 6/12... (306 compiles)  Compiling layer 7/12... (313 compiles)  Compiling layer 8/12... (320 compiles)  Compiling layer 9/12... (327 compiles)  Compiling layer 10/12... (334 compiles)  Compiling layer 11/12... (341 compiles)  Compiling layer 12/12... (348 compiles)  Compiled 86 kernels in 4620ms                    
+step 300  loss=8.9624
+step 310  loss=8.9854
+step 320  loss=8.9484
+step 330  loss=8.9334
+step 340  loss=9.0562
+step 350  loss=9.0545
+step 360  loss=8.9982
+step 370  loss=8.9502
+step 380  loss=9.1077
+step 390  loss=9.0063
+  [batch 100: compile=4620ms train=7180.6ms (71.8ms/step) fwd=2142.9ms bwd=5037.5ms overlap=0.0ms compiles=357]
+  Compiling layer 1/12... (357 compiles)  Compiling layer 2/12... (364 compiles)  Compiling layer 3/12... (371 compiles)  Compiling layer 4/12... (378 compiles)  Compiling layer 5/12... (385 compiles)  Compiling layer 6/12... (392 compiles)  Compiling layer 7/12... (399 compiles)  Compiling layer 8/12... (406 compiles)  Compiling layer 9/12... (413 compiles)  Compiling layer 10/12... (420 compiles)  Compiling layer 11/12... (427 compiles)  Compiling layer 12/12... (434 compiles)  Compiled 86 kernels in 4664ms                    
+step 400  loss=8.6572
+step 410  loss=8.6321
+step 420  loss=8.6173
+step 430  loss=8.6234
+step 440  loss=8.6438
+step 450  loss=8.7883
+step 460  loss=8.7949
+step 470  loss=8.6370
+step 480  loss=8.5965
+step 490  loss=8.6970
+  [batch 100: compile=4664ms train=7180.3ms (71.8ms/step) fwd=2139.9ms bwd=5040.2ms overlap=0.0ms compiles=443]
+  Compiling layer 1/12... (443 compiles)  Compiling layer 2/12... (450 compiles)  Compiling layer 3/12... (457 compiles)  Compiling layer 4/12... (464 compiles)  Compiling layer 5/12... (471 compiles)  Compiling layer 6/12... (478 compiles)  Compiling layer 7/12... (485 compiles)  Compiling layer 8/12... (492 compiles)  Compiling layer 9/12... (499 compiles)  Compiling layer 10/12... (506 compiles)  Compiling layer 11/12... (513 compiles)  Compiling layer 12/12... (520 compiles)  Compiled 86 kernels in 4665ms                    
+step 500  loss=8.4090
+step 510  loss=8.3208
+step 520  loss=8.4107
+step 530  loss=8.2733
+step 540  loss=8.4462
+step 550  loss=8.1860
+step 560  loss=8.3740
+step 570  loss=8.4691
+step 580  loss=8.3706
+step 590  loss=8.2927
+  [batch 100: compile=4665ms train=7177.9ms (71.8ms/step) fwd=2147.7ms bwd=5030.0ms overlap=0.0ms compiles=529]
+  Compiling layer 1/12... (529 compiles)  Compiling layer 2/12... (536 compiles)  Compiling layer 3/12... (543 compiles)  Compiling layer 4/12... (550 compiles)  Compiling layer 5/12... (557 compiles)  Compiling layer 6/12... (564 compiles)  Compiling layer 7/12... (571 compiles)  Compiling layer 8/12... (578 compiles)  Compiling layer 9/12... (585 compiles)  Compiling layer 10/12... (592 compiles)  Compiling layer 11/12... (599 compiles)  Compiling layer 12/12... (606 compiles)  Compiled 86 kernels in 4684ms                    
+step 600  loss=8.1650
+step 610  loss=8.0462
+step 620  loss=8.2010
+step 630  loss=8.1920
+step 640  loss=8.2894
+step 650  loss=8.0755
+step 660  loss=8.3809
+step 670  loss=8.0741
+step 680  loss=7.9805
+step 690  loss=8.1458
+  [batch 100: compile=4684ms train=7176.5ms (71.8ms/step) fwd=2145.1ms bwd=5031.2ms overlap=0.0ms compiles=615]
+  Compiling layer 1/12... (615 compiles)  Compiling layer 2/12... (622 compiles)  Compiling layer 3/12... (629 compiles)  Compiling layer 4/12... (636 compiles)  Compiling layer 5/12... (643 compiles)  Compiling layer 6/12... (650 compiles)  Compiling layer 7/12... (657 compiles)  Compiling layer 8/12... (664 compiles)  Compiling layer 9/12... (671 compiles)  Compiling layer 10/12... (678 compiles)  Compiling layer 11/12... (685 compiles)  Compiling layer 12/12... (692 compiles)  Compiled 86 kernels in 4665ms                    
+step 700  loss=8.0566
+step 710  loss=7.6986
+step 720  loss=7.7025
+step 730  loss=7.9941
+step 740  loss=7.9722
+step 750  loss=7.7935
+step 760  loss=8.0954
+step 770  loss=7.8048
+step 780  loss=8.0770
+step 790  loss=7.8650
+  [batch 100: compile=4665ms train=7162.6ms (71.6ms/step) fwd=2143.4ms bwd=5019.0ms overlap=0.0ms compiles=701]
+  Compiling layer 1/12... (701 compiles)  Compiling layer 2/12... (708 compiles)  Compiling layer 3/12... (715 compiles)  Compiling layer 4/12... (722 compiles)  Compiling layer 5/12... (729 compiles)  Compiling layer 6/12... (736 compiles)  Compiling layer 7/12... (743 compiles)  Compiling layer 8/12... (750 compiles)  Compiling layer 9/12... (757 compiles)  Compiling layer 10/12... (764 compiles)  Compiling layer 11/12... (771 compiles)  Compiling layer 12/12... (778 compiles)  Compiled 86 kernels in 4679ms                    
+step 800  loss=7.5334
+step 810  loss=7.4580
+step 820  loss=7.4427
+step 830  loss=7.6437
+step 840  loss=7.5888
+step 850  loss=7.7237
+step 860  loss=7.4797
+step 870  loss=7.5287
+step 880  loss=7.6890
+step 890  loss=7.5011
+  [batch 100: compile=4679ms train=7164.3ms (71.6ms/step) fwd=2142.7ms bwd=5021.4ms overlap=0.0ms compiles=787]
+  Compiling layer 1/12... (787 compiles)  Compiling layer 2/12... (794 compiles)  Compiling layer 3/12... (801 compiles)  Compiling layer 4/12... (808 compiles)  Compiling layer 5/12... (815 compiles)  Compiling layer 6/12... (822 compiles)  Compiling layer 7/12... (829 compiles)  Compiling layer 8/12... (836 compiles)  Compiling layer 9/12... (843 compiles)  Compiling layer 10/12... (850 compiles)  Compiling layer 11/12... (857 compiles)  Compiling layer 12/12... (864 compiles)  Compiled 86 kernels in 4686ms                    
+step 900  loss=7.2420
+step 910  loss=7.3744
+step 920  loss=7.2903
+step 930  loss=7.5300
+step 940  loss=7.3443
+step 950  loss=7.3193
+step 960  loss=7.4024
+step 970  loss=7.3031
+step 980  loss=7.5331
+step 990  loss=7.2301
+  [batch 100: compile=4686ms train=7163.4ms (71.6ms/step) fwd=2139.8ms bwd=5023.4ms overlap=0.0ms compiles=873]
+
+=== Pipeline Parallel Efficiency Report ===
+Total steps:     1000
+Wall time:       118843 ms (118.8 s)
+Compile time:    46187 ms (38.9%)
+Train time:      71776 ms (60.4%)
+Avg train:       71.8 ms/step
+Forward total:   21465 ms
+Backward total:  50309 ms
+Overlap saved:   0 ms (0.0% of bwd)
+ANE TFLOPS:      1.47 sustained
+Total TFLOPS:    2.43 (ANE+CPU)
+ANE utilization: 9.3% of 15.8 TFLOPS

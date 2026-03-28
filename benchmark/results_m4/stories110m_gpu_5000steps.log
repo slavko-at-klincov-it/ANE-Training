@@ -1,0 +1,68 @@
+/opt/homebrew/lib/python3.14/site-packages/torch/_subclasses/functional_tensor.py:307: UserWarning: Failed to initialize NumPy: No module named 'numpy' (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:84.)
+  cpu = _conversion_method_template(device=torch.device("cpu"))
+Model: Stories-110M on GPU (MPS)
+Params: 85.0M unique (109.5M total with tied)
+Config: dim=768 hidden=2048 heads=12 layers=12 seq=256 vocab=32000
+Data: 20658981 tokens from ../training/tinystories_data00.bin
+
+Training: 5000 steps, accum=10, lr=0.0003, warmup=100
+======================================================================
+step    0  loss=10.4210  lr=3.00e-06  1396.3ms/step  0.93 TFLOPS
+step  100  loss=5.4906  lr=3.00e-04  1170.5ms/step  1.11 TFLOPS
+step  200  loss=3.9392  lr=3.00e-04  1328.0ms/step  0.98 TFLOPS
+step  300  loss=3.7170  lr=2.99e-04  1327.4ms/step  0.98 TFLOPS
+step  400  loss=3.1623  lr=2.98e-04  1329.3ms/step  0.98 TFLOPS
+step  500  loss=3.0144  lr=2.96e-04  1183.5ms/step  1.10 TFLOPS
+step  600  loss=2.6713  lr=2.93e-04  1166.5ms/step  1.12 TFLOPS
+step  700  loss=2.9309  lr=2.90e-04  1172.5ms/step  1.11 TFLOPS
+step  800  loss=2.4639  lr=2.87e-04  1171.3ms/step  1.11 TFLOPS
+step  900  loss=2.7535  lr=2.83e-04  1177.7ms/step  1.11 TFLOPS
+step 1000  loss=2.2868  lr=2.78e-04  1180.1ms/step  1.11 TFLOPS
+step 1100  loss=2.3952  lr=2.73e-04  1185.3ms/step  1.10 TFLOPS
+step 1200  loss=2.4042  lr=2.68e-04  1185.8ms/step  1.10 TFLOPS
+step 1300  loss=2.2745  lr=2.62e-04  1190.8ms/step  1.10 TFLOPS
+step 1400  loss=2.2920  lr=2.56e-04  1192.4ms/step  1.09 TFLOPS
+step 1500  loss=2.1938  lr=2.49e-04  1197.3ms/step  1.09 TFLOPS
+step 1600  loss=1.9925  lr=2.42e-04  1199.3ms/step  1.09 TFLOPS
+step 1700  loss=2.0881  lr=2.35e-04  1200.5ms/step  1.09 TFLOPS
+step 1800  loss=2.1205  lr=2.27e-04  1195.8ms/step  1.09 TFLOPS
+step 1900  loss=2.2391  lr=2.20e-04  1194.4ms/step  1.09 TFLOPS
+step 2000  loss=2.1835  lr=2.12e-04  1196.6ms/step  1.09 TFLOPS
+step 2100  loss=2.1385  lr=2.03e-04  1191.8ms/step  1.09 TFLOPS
+step 2200  loss=1.9942  lr=1.95e-04  1197.5ms/step  1.09 TFLOPS
+step 2300  loss=2.0799  lr=1.87e-04  1196.8ms/step  1.09 TFLOPS
+step 2400  loss=1.9085  lr=1.78e-04  1195.0ms/step  1.09 TFLOPS
+step 2500  loss=2.0078  lr=1.69e-04  1197.0ms/step  1.09 TFLOPS
+step 2600  loss=1.8357  lr=1.61e-04  1191.1ms/step  1.10 TFLOPS
+step 2700  loss=1.8427  lr=1.52e-04  1192.8ms/step  1.09 TFLOPS
+step 2800  loss=1.9334  lr=1.43e-04  1193.2ms/step  1.09 TFLOPS
+step 2900  loss=1.9105  lr=1.35e-04  1199.8ms/step  1.09 TFLOPS
+step 3000  loss=1.9036  lr=1.27e-04  1194.5ms/step  1.09 TFLOPS
+step 3100  loss=1.7250  lr=1.18e-04  1196.9ms/step  1.09 TFLOPS
+step 3200  loss=1.7276  lr=1.10e-04  1197.7ms/step  1.09 TFLOPS
+step 3300  loss=2.1406  lr=1.03e-04  1191.5ms/step  1.10 TFLOPS
+step 3400  loss=1.6437  lr=9.50e-05  1192.9ms/step  1.09 TFLOPS
+step 3500  loss=1.8657  lr=8.78e-05  1192.1ms/step  1.09 TFLOPS
+step 3600  loss=1.7216  lr=8.08e-05  1196.5ms/step  1.09 TFLOPS
+step 3700  loss=1.8779  lr=7.42e-05  1195.5ms/step  1.09 TFLOPS
+step 3800  loss=1.8283  lr=6.80e-05  1194.5ms/step  1.09 TFLOPS
+step 3900  loss=1.8546  lr=6.22e-05  1195.3ms/step  1.09 TFLOPS
+step 4000  loss=1.6870  lr=5.68e-05  1194.3ms/step  1.09 TFLOPS
+step 4100  loss=1.9142  lr=5.19e-05  1194.1ms/step  1.09 TFLOPS
+step 4200  loss=1.8974  lr=4.74e-05  1188.6ms/step  1.10 TFLOPS
+step 4300  loss=1.7108  lr=4.34e-05  1192.7ms/step  1.09 TFLOPS
+step 4400  loss=1.6012  lr=3.99e-05  1196.7ms/step  1.09 TFLOPS
+step 4500  loss=1.6310  lr=3.69e-05  1192.3ms/step  1.09 TFLOPS
+step 4600  loss=1.7550  lr=3.44e-05  1191.6ms/step  1.10 TFLOPS
+step 4700  loss=1.6999  lr=3.25e-05  1195.1ms/step  1.09 TFLOPS
+step 4800  loss=1.6943  lr=3.11e-05  1193.1ms/step  1.09 TFLOPS
+step 4900  loss=1.7622  lr=3.03e-05  1194.5ms/step  1.09 TFLOPS
+
+======================================================================
+GPU (MPS) Training Complete
+  Steps: 5000, Accum: 10
+  Avg step: 1202.2 ms
+  Avg TFLOPS: 1.09
+  Final loss: 1.6618
+  Total time: 6011.3s
+  Results saved to /Users/slavkoklincov/Documents/ClaudeCodeFolder/ANE-Training/benchmark/results_m4/stories110m_gpu_5000steps.json

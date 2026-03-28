@@ -1,0 +1,22 @@
+Loading checkpoint: /Users/slavkoklincov/Code/ANE-Training/benchmark/../training/training_dynamic/ane_stories110M_dyn_ckpt.bin
+  Checkpoint loaded
+Model: Stories-110M on GPU (MPS)
+Params: 85.0M
+
+Inference benchmark: 100 tokens, seq_len=256
+Mode: Full-sequence recompute (no KV cache — matches ANE)
+============================================================
+  token    1  21.0 ms  47.7 tok/s  2.07 TFLOPS
+  token   20  20.9 ms  47.9 tok/s  2.08 TFLOPS
+  token   40  20.9 ms  47.8 tok/s  2.08 TFLOPS
+  token   60  21.0 ms  47.5 tok/s  2.07 TFLOPS
+  token   80  21.0 ms  47.6 tok/s  2.07 TFLOPS
+  token  100  20.9 ms  47.8 tok/s  2.08 TFLOPS
+
+============================================================
+GPU (MPS) Inference Complete — Stories-110M
+  Tokens: 100
+  Avg: 20.9 ms/token  (47.8 tokens/sec)
+  Throughput: 2.08 TFLOPS
+  Total: 2.1s
+  Saved to /Users/slavkoklincov/Code/ANE-Training/benchmark/results/power_gpu_inference.json

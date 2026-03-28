@@ -1,0 +1,24 @@
+/opt/homebrew/lib/python3.14/site-packages/torch/_subclasses/functional_tensor.py:307: UserWarning: Failed to initialize NumPy: No module named 'numpy' (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:84.)
+  cpu = _conversion_method_template(device=torch.device("cpu"))
+Loading checkpoint: /Users/slavkoklincov/Documents/ClaudeCodeFolder/ANE-Training/benchmark/../training/training_dynamic/ane_tiny_ckpt.bin
+  Checkpoint loaded
+Model: Tiny-ANE-15M on GPU (MPS)
+Params: 5.1M
+
+Inference benchmark: 100 tokens, seq_len=256
+Mode: Full-sequence recompute (no KV cache — matches ANE)
+============================================================
+  token    1  5.1 ms  194.8 tok/s  0.51 TFLOPS
+  token   20  4.8 ms  207.7 tok/s  0.54 TFLOPS
+  token   40  5.4 ms  186.6 tok/s  0.49 TFLOPS
+  token   60  5.1 ms  196.7 tok/s  0.52 TFLOPS
+  token   80  5.0 ms  199.3 tok/s  0.52 TFLOPS
+  token  100  5.1 ms  195.9 tok/s  0.51 TFLOPS
+
+============================================================
+GPU (MPS) Inference Complete — Tiny-ANE-15M
+  Tokens: 100
+  Avg: 5.2 ms/token  (190.6 tokens/sec)
+  Throughput: 0.50 TFLOPS
+  Total: 0.6s
+  Saved to /Users/slavkoklincov/Documents/ClaudeCodeFolder/ANE-Training/benchmark/results/tiny_ane_gpu_inference.json

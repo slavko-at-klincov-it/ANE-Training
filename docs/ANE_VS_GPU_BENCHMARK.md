@@ -2,31 +2,54 @@
 
 Direct comparison of **training** and **inference** on **Apple Neural Engine** vs **Metal GPU (MPS)** — same chip, same models, same weights.
 
-**Hardware:** Apple M3 Pro (11-core CPU, 14-core GPU, 16-core ANE, 18GB RAM)
-**Framework:** ANE = libane (custom C/ObjC pipeline), GPU = PyTorch 2.9.1 MPS
-**Date:** 2026-03-24
+**Hardware:**
+- Apple M3 Pro (11-core CPU, 14-core GPU, 16-core ANE, 18GB RAM) — h15g
+- Apple M4 Mac Mini (10-core CPU, 10-core GPU, 16-core ANE, 16GB RAM) — h16g
+
+**Framework:** ANE = libane (custom C/ObjC pipeline), GPU = PyTorch MPS
+**Date:** 2026-03-24 (M3 Pro), 2026-03-28 (M4)
 
 ---
 
 ## TL;DR
+
+### M3 Pro (h15g)
 
 | Task | Model | ANE | GPU | Speed | Energy |
 |:-----|:------|---:|---:|:---|:---|
 | **Inference** | Stories-110M | 41.3 tok/s | 47.8 tok/s | GPU 1.1x faster | **ANE 2.0x efficient** |
 | Training | Stories-110M | 0.64 TFLOPS | 1.50 TFLOPS | GPU 2.3x faster | ~equal |
 
-**Key insight:** ANE inference is nearly as fast as GPU (within 10-15%) but uses **2x less energy per token** — at 4.6W vs 10.9W system power. For training, GPU is faster but ANE uses half the power, resulting in roughly equal energy per optimizer step.
+### M4 (h16g)
+
+| Task | Model | ANE | GPU | Speed | Energy |
+|:-----|:------|---:|---:|:---|:---|
+| **Inference** | Stories-110M | **47.6 tok/s** | 33.4 tok/s | **ANE 1.4x faster** | — |
+| Training | Stories-110M | **1.37 TFLOPS** | 1.09 TFLOPS | **ANE 1.3x faster** | — |
+
+**Key insight (M3 Pro):** ANE inference is nearly as fast as GPU (within 10-15%) but uses **2x less energy per token** — at 4.6W vs 10.9W system power. For training, GPU is faster but ANE uses half the power, resulting in roughly equal energy per optimizer step.
+
+**Key insight (M4):** The M4 flips the comparison — ANE is now faster than GPU for both training and inference. The M4's stronger ANE (h16g) and weaker GPU (10 vs 14 cores) means ANE wins on speed AND efficiency. See [ANE_M4_BENCHMARK.md](ANE_M4_BENCHMARK.md) for full M4 results.
 
 ---
 
 ## Part 1: Inference Benchmark
 
-### Results
+### Results (M3 Pro)
 
 | Model | ANE ms/token | GPU ms/token | ANE tok/s | GPU tok/s | ANE TFLOPS | GPU TFLOPS |
 |:------|---:|---:|---:|---:|---:|---:|
 | **Tiny-ANE-15M** | 4.5 | 3.9 | 221 | 255 | 0.58 | 0.67 |
 | **Stories-110M** | 24.0 | 21.0 | 41.7 | 47.6 | 1.81 | 2.07 |
+
+### Results (M4)
+
+| Model | ANE ms/token | GPU ms/token | ANE tok/s | GPU tok/s | ANE TFLOPS | GPU TFLOPS |
+|:------|---:|---:|---:|---:|---:|---:|
+| **Tiny-ANE-15M** | 3.9 | 5.2 | **255** | 191 | 0.65 | 0.50 |
+| **Stories-110M** | 21.0 | 30.0 | **47.6** | 33.4 | 2.07 | 1.43 |
+
+> On M4, ANE is **1.3-1.4x faster** than GPU for inference (reversed from M3 Pro where GPU was slightly faster). The M4's 10-core GPU is weaker than M3 Pro's 14-core GPU, while M4 ANE (h16g) is faster than M3 Pro ANE (h15g).
 
 > Both use **full-sequence recompute** (no KV cache) for a fair comparison. Same trained checkpoint loaded on both.
 
@@ -47,12 +70,21 @@ Apple routes all CoreML inference to the ANE for a reason — it's nearly as fas
 
 ### Results
 
-### Summary Table
+### Summary Table (M3 Pro)
 
 | Model | ANE (ms/step) | GPU (ms/step) | ANE TFLOPS | GPU TFLOPS | Speed Winner |
 |:------|---:|---:|---:|---:|:---|
 | **Tiny-ANE-15M** | 955 | 190 | 0.082 | 0.414 | GPU 5.0x faster |
 | **Stories-110M** | 2,025 | 870 | 0.644 | 1.501 | GPU 2.3x faster |
+
+### Summary Table (M4)
+
+| Model | ANE (ms/step) | GPU (ms/step) | ANE TFLOPS | GPU TFLOPS | Speed Winner |
+|:------|---:|---:|---:|---:|:---|
+| **Tiny-ANE-15M** | 257 | 232 | 0.306 | 0.338 | GPU 1.1x faster |
+| **Stories-110M** | 949 | 1,195 | 1.374 | 1.092 | **ANE 1.3x faster** |
+
+> On M4, ANE training is dramatically faster: Stories-110M ANE achieves **1.37 TFLOPS** vs 0.64 on M3 Pro — a 2.1x improvement. The M4 GPU is slower (1.09 TFLOPS vs 1.50) due to fewer cores. See [ANE_M4_BENCHMARK.md](ANE_M4_BENCHMARK.md) for long training runs and stability analysis.
 
 > **"Step"** = one Adam optimizer update = 10 micro-steps (gradient accumulation).
 > Both systems use identical hyperparameters: lr=3e-4, AdamW(beta2=0.95), cosine schedule, grad_clip=1.0.
@@ -95,9 +127,9 @@ Apple routes all CoreML inference to the ANE for a reason — it's nearly as fas
 
 ## Key Findings
 
-### 1. GPU is faster for training on the same chip
+### 1. GPU vs ANE training speed depends on the chip
 
-The M3 Pro GPU outperforms the ANE pipeline **5x for small models** and **2.3x for larger models**. The gap narrows with model size because the ANE's share of compute increases.
+On the **M3 Pro**, the GPU outperforms ANE **5x for small models** and **2.3x for larger models** — the 14-core GPU is simply faster. On the **M4**, this reverses: ANE is **1.3x faster** for Stories-110M because the M4 has only 10 GPU cores but a faster ANE (h16g). The gap narrows with model size on both chips because the ANE's share of compute increases.
 
 ### 2. The ANE hardware itself is not the bottleneck
 
@@ -110,11 +142,12 @@ The ANE silicon is fast — only 13-49ms per micro-step. The bottleneck is **CPU
 
 | Model | Params | ANE % of step | CPU % of step | GPU speed advantage |
 |:------|---:|---:|---:|:---|
-| Tiny-ANE-15M | 5.1M | 14% | 81% | 5.0x |
-| Stories-110M | 85M | 24% | 59% | 2.3x |
-| *Projected 1B+* | *1B* | *~40%+* | *~40%* | *~1.5x or less* |
+| Tiny-ANE-15M (M3 Pro) | 5.1M | 14% | 81% | 5.0x |
+| Stories-110M (M3 Pro) | 85M | 24% | 59% | 2.3x |
+| Stories-110M (M4) | 85M | 39% | 34% | **ANE 1.3x faster** |
+| *Projected 1B+* | *1B* | *~40%+* | *~40%* | *ANE likely faster* |
 
-As models grow, ANE matmuls dominate and CPU overhead becomes a smaller fraction. At some model size, the ANE pipeline could match or exceed GPU — but practical limits (memory, compile budget) may prevent reaching that crossover on current hardware.
+As models grow, ANE matmuls dominate and CPU overhead becomes a smaller fraction. On M4, the crossover has already happened at Stories-110M — ANE is faster than GPU. On M3 Pro (with its stronger 14-core GPU), the crossover would require even larger models.
 
 ### 4. ANE keeps GPU free
 

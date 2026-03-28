@@ -36,14 +36,15 @@ cd training && make <target>          # Build specific training target
 - **QoS Background (9) is fastest** — less OS scheduling interference, ~0 dispatch overhead.
 - **Conv 1x1 is 3x faster than matmul** on ANE — express all matmuls as 1x1 conv.
 - **SRAM is ~32MB** — tensors beyond this spill to DRAM with ~30% throughput drop.
-- **ANE Silicon Peak: 12.79 TFLOPS** (128x stacked conv benchmark, M3 Pro).
-- **Sustained Single-Kernel: 5.01 TFLOPS** (continuous eval, one kernel shape).
-- **Real Training (Stories-110M): 2.15 TFLOPS** (80.9 ms/step, pipeline parallel).
-- **Sequential Training: 1.87 TFLOPS** (93 ms/step, without pipeline).
-- **Inference: CPU beats ANE at all shapes up to 1024x1024** — ANE avg 722 GFLOPS vs CPU 1449 GFLOPS (M3 Pro).
+- **ANE Silicon Peak: 12.79 TFLOPS** (M3 Pro h15g), **13.86 TFLOPS** (M4 h16g).
+- **Sustained Single-Kernel: 5.01 TFLOPS** (M3 Pro), **5.47 TFLOPS** (M4).
+- **Real Training (Stories-110M): 2.15 TFLOPS** (80.9 ms/step, pipeline, M3 Pro), **2.43 TFLOPS** (71.8 ms/step, pipeline, M4).
+- **Sequential Training: 1.87 TFLOPS** (93 ms/step, M3 Pro), **1.40 TFLOPS** (93.1 ms/step, M4).
+- **Inference: CPU beats ANE at shapes up to 1024x1024 on M3 Pro** — ANE avg 722 GFLOPS vs CPU 1449 GFLOPS. **On M4, ANE surpasses CPU at 1024x1024+** — ANE avg 1223 GFLOPS (+69%).
+- **M4: ANE beats GPU** for both training (1.3x faster) and inference (1.4x faster). M4 has 10 GPU cores vs M3 Pro's 14.
 - **ANE inference power: ~200-400 mW** — 5-20x more power-efficient than CPU/GPU (~2400 GFLOPS/Watt vs ~290).
-- **ANE value proposition is power efficiency, not speed.**
-- **Training converges**: Stories-110M loss 9.72→3.00 best (50K steps, 1B tokens, diverges to NaN at 45K). Tiny-ANE-15M loss 9.66→2.54 (20K steps).
+- **ANE value proposition is power efficiency AND speed (on M4).**
+- **Training converges**: Stories-110M loss 9.72→3.00 best (50K steps, 1B tokens, diverges to NaN at 45K). Tiny-ANE-15M loss 9.66→2.54 (20K steps). On M4: Tiny-ANE loss 9.16→3.25 (10K steps). Stories-110M with lr=1e-4+maxact=100: loss 9.10→4.55 (5K steps, stable).
 - Peak numbers are benchmark-only — real training is ~6x lower due to per-layer dispatch, IOSurface I/O, and CPU gradients.
 - **Thermal: always Nominal** — ANE never throttles under sustained compute load.
 
@@ -96,3 +97,4 @@ All deep RE findings are in `docs/`:
 - `ANE_CHAINING.md` — Chaining = loopback, dispatch overhead analysis
 - `ANE_COMPILER_OPTIONS.md` — Runtime option keys, KeepMemoryWired rejection
 - `ANE_QOS_EVENTS.md` — 76 classes, QoS mapping, SharedEvents, model attributes
+- `ANE_M4_BENCHMARK.md` — Complete M4 Mac Mini benchmark results (training, inference, peak TFLOPS)

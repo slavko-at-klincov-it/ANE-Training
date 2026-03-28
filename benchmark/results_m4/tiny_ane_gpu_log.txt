@@ -1,0 +1,28 @@
+/opt/homebrew/lib/python3.14/site-packages/torch/_subclasses/functional_tensor.py:307: UserWarning: Failed to initialize NumPy: No module named 'numpy' (Triggered internally at /Users/runner/work/pytorch/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:84.)
+  cpu = _conversion_method_template(device=torch.device("cpu"))
+Model: Tiny-ANE-15M on GPU (MPS)
+Params: 5.1M unique (13.3M total with tied)
+Config: dim=256 hidden=768 heads=4 layers=6 seq=256 vocab=32000
+Data: 20658981 tokens from /Users/slavkoklincov/Documents/ClaudeCodeFolder/ANE-Training/benchmark/../training/tinystories_data00.bin
+
+Training: 100 steps, accum=10, lr=0.0003, warmup=10
+======================================================================
+step    0  loss=10.4045  lr=3.00e-05  507.7ms/step  0.15 TFLOPS
+step   10  loss=9.6908  lr=3.00e-04  233.3ms/step  0.34 TFLOPS
+step   20  loss=8.6503  lr=2.92e-04  231.7ms/step  0.34 TFLOPS
+step   30  loss=7.7041  lr=2.68e-04  231.9ms/step  0.34 TFLOPS
+step   40  loss=7.0635  lr=2.32e-04  232.0ms/step  0.34 TFLOPS
+step   50  loss=6.6183  lr=1.88e-04  232.9ms/step  0.34 TFLOPS
+step   60  loss=6.3694  lr=1.42e-04  232.2ms/step  0.34 TFLOPS
+step   70  loss=6.2693  lr=9.75e-05  231.8ms/step  0.34 TFLOPS
+step   80  loss=6.1459  lr=6.16e-05  232.2ms/step  0.34 TFLOPS
+step   90  loss=6.1433  lr=3.81e-05  233.1ms/step  0.34 TFLOPS
+
+======================================================================
+GPU (MPS) Training Complete
+  Steps: 100, Accum: 10
+  Avg step: 235.1 ms
+  Avg TFLOPS: 0.34
+  Final loss: 6.0370
+  Total time: 23.5s
+  Results saved to /Users/slavkoklincov/Documents/ClaudeCodeFolder/ANE-Training/benchmark/results/tiny_ane_gpu_results.json
